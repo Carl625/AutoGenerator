@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+
+<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1000.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="AutoPathGenerator.WindowController">
+  <tabs>
+    <Tab fx:id="PathSpec" text="Path Specification">
+      <content>
+        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+               <children>
+                  <Canvas fx:id="fieldDisplay" height="700.0" onMouseClicked="#fieldClicked" width="700.0" AnchorPane.bottomAnchor="21.0" AnchorPane.leftAnchor="279.0" AnchorPane.rightAnchor="21.0" AnchorPane.topAnchor="21.0" />
+               </children></AnchorPane>
+      </content>
+    </Tab>
+    <Tab fx:id="AutoInit" text="Auto Initialization" />
+      <Tab fx:id="AutoMisc" text="Auto Miscellaneous" />
+      <Tab fx:id="Generate" text="Generation">
+        <content>
+          <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+        </content>
+      </Tab>
+  </tabs>
+</TabPane>
