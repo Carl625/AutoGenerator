@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/AutoPathGenerator.iml" filepath="$PROJECT_DIR$/AutoPathGenerator.iml" />
+      <module fileurl="file://$PROJECT_DIR$/AutoGenerator.iml" filepath="$PROJECT_DIR$/AutoGenerator.iml" />
     </modules>
   </component>
 </project>

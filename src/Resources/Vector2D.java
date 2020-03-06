@@ -1,7 +1,6 @@
 package Resources;
 
 import javafx.geometry.Point2D;
-
 import java.util.Arrays;
 
 public class Vector2D {
@@ -254,6 +253,11 @@ public class Vector2D {
         }
 
         return true;
+    }
+
+    public Point2D toPoint() {
+
+        return (new Point2D(components[0], components[1]));
     }
 
     public static Vector2D[] copy(Vector2D[] original) {
