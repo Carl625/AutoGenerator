@@ -1,6 +1,7 @@
 package AutoPathGenerator;
 
 import Resources.Vector2D;
+import com.sun.prism.paint.Paint;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -16,6 +17,8 @@ import javafx.scene.paint.Color;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class WindowController {
 
@@ -42,9 +45,17 @@ public class WindowController {
     public TextField specArmPosField;
     public TextField startDragPosField;
 
+    //internal variables
+    private ArrayList<Vector2D> orderedPathVectors;
+    private double pixelsPerInch = (700.0 / (24.0 * 6.0)); // 700x700 pixel image of a 12ft x 12ft field
+
     public void initialize() {
 
+        // init graphics
         initTabs();
+
+        //init internal variables
+        orderedPathVectors = new ArrayList<Vector2D>();
     }
 
     private void initTabs() {
@@ -53,6 +64,8 @@ public class WindowController {
         initAutoInit();
         initAutoMisc();
         initAutoGen();
+
+        vectorDrawTester();
     }
 
     private void initPathSpec() {
@@ -130,7 +143,7 @@ public class WindowController {
         if (selectIndex != -1) {
 
             String newlySelected = (String) defStoneDropdown.getItems().get(selectIndex);
-            System.out.println("new Default Stone Dropdown value: " + newlySelected);
+            //System.out.println("new Default Stone Dropdown value: " + newlySelected);
         }
     }
 
@@ -141,7 +154,7 @@ public class WindowController {
         if (selectIndex != -1) {
 
             String newlySelected = (String) allianceDropdown.getItems().get(selectIndex);
-            System.out.println("new Alliance Dropdown value: " + newlySelected);
+            //System.out.println("new Alliance Dropdown value: " + newlySelected);
         }
     }
 
@@ -152,7 +165,7 @@ public class WindowController {
         if (selectIndex != -1) {
 
             String newlySelected = (String) initGrabDropdown.getItems().get(selectIndex);
-            System.out.println("new Grab Dropdown value: " + newlySelected);
+            //System.out.println("new Grab Dropdown value: " + newlySelected);
         }
     }
 
@@ -163,7 +176,7 @@ public class WindowController {
         if (selectIndex != -1) {
 
             String newlySelected = (String) initArmDropdown.getItems().get(selectIndex);
-            System.out.println("new Arm Dropdown value: " + newlySelected);
+            //System.out.println("new Arm Dropdown value: " + newlySelected);
 
             if (newlySelected.equals("Specific")) {
 
@@ -177,7 +190,25 @@ public class WindowController {
 
     // data manipulation/internal processing
 
+    public double normalizeAngle(double degrees) {
+
+        while (degrees < 0) {
+
+            degrees += 360;
+        }
+
+        while (degrees > 360) {
+
+            degrees -= 360;
+        }
+
+        return degrees;
+    }
+
     public void fieldClicked(MouseEvent mouseEvent) {
+        Vector2D mouseClick = new Vector2D(mouseEvent.getSceneX() - fieldDisplay.getLayoutX(), mouseEvent.getSceneY() - fieldDisplay.getLayoutY());
+
+
     }
 
     private void resetField() {
@@ -185,21 +216,58 @@ public class WindowController {
         graphics.drawImage(field, 0, 0);
     }
 
+    private void drawVectorInch(Canvas c, Vector2D initPoint, Vector2D termPoint, Color arrowColor) {
+
+        drawVector(c, Vector2D.scaleComp(initPoint, pixelsPerInch), Vector2D.scaleComp(termPoint, pixelsPerInch), arrowColor);
+    }
+
     private void drawVector(Canvas c, Vector2D initPoint, Vector2D termPoint, Color arrowColor) {
+
+        double xOffset = c.getWidth() / 2.0;
+        double yOffset = c.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        initPoint.add(centerOffset);
+        termPoint.add(centerOffset);
 
         if (c.contains(initPoint.toPoint()) && c.contains(termPoint.toPoint())) {
 
             GraphicsContext g = c.getGraphicsContext2D();
+            g.setStroke(arrowColor);
+            g.setFill(arrowColor);
 
-            double xDir = (termPoint.getComponent(0) - initPoint.getComponent(0)) / Math.abs(termPoint.getComponent(0) - initPoint.getComponent(0));
-            double yDir = (termPoint.getComponent(1) - initPoint.getComponent(1)) / Math.abs(termPoint.getComponent(1) - initPoint.getComponent(1));
-            double angle = Vector2D.sub(termPoint, initPoint).getTheta();
+            Vector2D pathVector = Vector2D.sub(termPoint, initPoint);
+            System.out.println(pathVector);
+            double angle = pathVector.getTheta();
+            System.out.println(Math.toDegrees(angle));
+            double triangleSideMagnitude = 10;
 
-            double[] xPoint = {(termPoint.getComponent(0) - ((xDir * 50) / Math.cos(angle))), termPoint.getComponent(0), termPoint.getComponent(0)}; // TODO: finish these so the edges of the triangles are pointing in the direction of the vector
-            double[] yPoint = {termPoint.getComponent(1), termPoint.getComponent(1), termPoint.getComponent(1) - (yDir * 50)};
+            double[] xPoints = new double[3]; //TODO: finish these so the edges of the triangles are pointing in the direction of the vector
+            double[] yPoints = new double[3];
 
-            g.strokeLine(initPoint.getComponent(0), initPoint.getComponent(1), termPoint.getComponent(0), termPoint.getComponent(1));
-            //g.fillPolygon(xPoint, yPoint, 3);
+            //tip
+            xPoints[1] = termPoint.getComponent(0);
+            yPoints[1] = termPoint.getComponent(1);
+
+            // second corner of the triangle
+            Vector2D tip1 = Vector2D.add(termPoint, new Vector2D(normalizeAngle(135 + Math.toDegrees(angle)), triangleSideMagnitude, false));
+            xPoints[0] = tip1.getComponent(0);
+            yPoints[0] = tip1.getComponent(1);
+
+            //third corner of the triangle
+            Vector2D tip2 = Vector2D.add(termPoint, new Vector2D(normalizeAngle(Math.toDegrees(angle) - 135), triangleSideMagnitude, false));
+            xPoints[2] = tip2.getComponent(0);
+            yPoints[2] = tip2.getComponent(1);
+
+            g.strokeLine(initPoint.getComponent(0), initPoint.getComponent(1), xPoints[1], yPoints[1]);
+//            System.out.println(Arrays.toString(xPoints));
+//            System.out.println(Arrays.toString(yPoints));
+            g.fillPolygon(xPoints, yPoints, 3);
         }
+    }
+
+    private void vectorDrawTester() {
+
+        drawVectorInch(fieldDisplay, new Vector2D(0, 0), new Vector2D(36, 36), Color.LAWNGREEN);
+        drawVectorInch(fieldDisplay, new Vector2D(36, 36), new Vector2D(36, -36), Color.LAWNGREEN);
     }
 }

@@ -16,14 +16,15 @@ public class Vector2D {
         genAngles();
     }
 
-    public Vector2D(float newTheta, float newMag, boolean isRad) {
+    public Vector2D(double newTheta, double newMag, boolean isRad) {
+
+        R = newMag;
+        theta = newTheta;
 
         if (!isRad) {
             theta = Math.toRadians(theta);
         }
 
-        R = newMag;
-        theta = newTheta;
         genComp();
     }
 
@@ -64,7 +65,8 @@ public class Vector2D {
                 }
             } else {
 
-                theta = Math.atan(components[1] / components[0]);
+                theta = Math.atan2(components[1], components[0]);
+                //theta = Math.atan(components[1] / components[0]);
 
                 if (components[0] < 0) {
 
@@ -165,6 +167,22 @@ public class Vector2D {
         iTwo.scale(-1);
 
         return iTwo;
+    }
+
+    public static Vector2D scale(Vector2D term_one, double newScalar) {
+
+        double angle = term_one.getTheta();
+        double scalar = term_one.getMag();
+
+        return (new Vector2D(angle, scalar * newScalar, true));
+    }
+
+    public static Vector2D scaleComp(Vector2D term_one, double newScalar) {
+
+        double newX = term_one.getComponent(0) * newScalar;
+        double newY = term_one.getComponent(1) * newScalar;
+
+        return (new Vector2D(newX, newY));
     }
 
     public void zero() {
