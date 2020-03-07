@@ -134,6 +134,14 @@ public class Vector2D {
         }
     }
 
+    public void setComponent(int component, double value) {
+
+        if (component < 2) {
+
+            components[component] = value;
+        }
+    }
+
     public void add(Vector2D term_two) {
 
         double[] two_comp = term_two.getComponents();

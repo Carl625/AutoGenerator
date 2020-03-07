@@ -1,14 +1,10 @@
 package AutoPathGenerator;
 
 import Resources.Vector2D;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
@@ -16,7 +12,6 @@ import javafx.scene.paint.Color;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 public class WindowController {
@@ -29,8 +24,16 @@ public class WindowController {
     private Image field;
 
     //Path editing and definition variables
-    public ChoiceBox pathModeDropdown;
+    public ChoiceBox<String> pathModeDropdown;
     private String pathMode;
+
+    public Label pathColorSetText;
+    public ColorPicker currentPathColorPicker;
+    private Color currentPathColor;
+
+    public Label compSnapText;
+    public ChoiceBox<String> pathComponentSnapDropdown;
+    private String pathComponentSnap;
 
     //Point editing and definition variables
 
@@ -44,10 +47,10 @@ public class WindowController {
     public CheckBox skystonePosRelGenCheckBox;
 
     // drodowns
-    public ChoiceBox defStoneDropdown;
-    public ChoiceBox allianceDropdown;
-    public ChoiceBox initGrabDropdown;
-    public ChoiceBox initArmDropdown;
+    public ChoiceBox<String> defStoneDropdown;
+    public ChoiceBox<String> allianceDropdown;
+    public ChoiceBox<String> initGrabDropdown;
+    public ChoiceBox<String> initArmDropdown;
 
     // text/numerical fields
     public TextField autoNameField;
@@ -56,7 +59,7 @@ public class WindowController {
     public TextField initYField;
     public TextField initXField;
 
-    //internal variables
+    /*---------- Internal Variables ----------*/
     private ArrayList<Vector2D> orderedPathVectors;
     private Vector2D initialPos;
     private double pixelsPerInch = (700.0 / (24.0 * 6.0)); // 700x700 pixel image of a 12ft x 12ft field
@@ -109,11 +112,28 @@ public class WindowController {
         pathModeDropdown.getItems().add("Edit Components");
         pathModeDropdown.getItems().add("Rigid Transform");
         pathModeDropdown.getSelectionModel().select(0);
-        pathModeDropdown.setOnAction(new EventHandler() {
-            public void handle(Event event) {pathModeChanged();}
-        });
+        pathModeDropdown.setOnAction(event -> pathModeChanged());
 
-        pathMode = (String) pathModeDropdown.getItems().get(0);
+        pathMode = pathModeDropdown.getItems().get(0);
+
+        //path design
+        currentPathColorPicker.setValue(Color.LAWNGREEN);
+        currentPathColorPicker.setOnAction(event -> pathColorChanged());
+
+        currentPathColor = currentPathColorPicker.getValue();
+
+        pathComponentSnapDropdown.getItems().clear();
+        pathComponentSnapDropdown.getItems().add("None");
+        pathComponentSnapDropdown.getItems().add("Vertical");
+        pathComponentSnapDropdown.getItems().add("Horizontal");
+        pathComponentSnapDropdown.getSelectionModel().select(0);
+        pathComponentSnapDropdown.setOnAction(event -> pathComponentSnapChanged());
+
+        //point design
+
+        //path editing
+
+        //point editing
     }
 
     private void initPointDef() {
@@ -127,25 +147,19 @@ public class WindowController {
         defStoneDropdown.getItems().add("Middle");
         defStoneDropdown.getItems().add("Right");
         defStoneDropdown.getSelectionModel().select(1);
-        defStoneDropdown.setOnAction(new EventHandler() {
-            public void handle(Event event) {defStoneDropdownChanged();}
-        });
+        defStoneDropdown.setOnAction(event -> defStoneDropdownChanged());
 
         allianceDropdown.getItems().clear();
         allianceDropdown.getItems().add("Red");
         allianceDropdown.getItems().add("Blue");
         allianceDropdown.getSelectionModel().select(0);
-        allianceDropdown.setOnAction(new EventHandler() {
-            public void handle(Event event) {allianceDropdownChanged();}
-        });
+        allianceDropdown.setOnAction(event -> allianceDropdownChanged());
 
         initGrabDropdown.getItems().clear();
         initGrabDropdown.getItems().add("Grab");
         initGrabDropdown.getItems().add("Release");
         initGrabDropdown.getSelectionModel().select(1);
-        initGrabDropdown.setOnAction(new EventHandler() {
-            public void handle(Event event) {grabDropdownChanged();}
-        });
+        initGrabDropdown.setOnAction(event -> grabDropdownChanged());
 
         initArmDropdown.getItems().clear();
         initArmDropdown.getItems().add("In");
@@ -154,30 +168,14 @@ public class WindowController {
         initArmDropdown.getItems().add("Drop");
         initArmDropdown.getItems().add("Specific");
         initArmDropdown.getSelectionModel().select(1);
-        initArmDropdown.setOnAction(new EventHandler() {
-            public void handle(Event event) {armDropdownChanged();}
-        });
+        initArmDropdown.setOnAction(event -> armDropdownChanged());
 
         // field initialization
-        autoNameField.setOnAction(new EventHandler() {
-            public void handle(Event event) {autoNameChanged();}
-        });
-
-        specArmPosField.setOnAction(new EventHandler() {
-            public void handle(Event event) {specArmPosChanged();}
-        });
-
-        startDragPosField.setOnAction(new EventHandler() {
-            public void handle(Event event) {startDragPosChanged();}
-        });
-
-        initXField.setOnAction(new EventHandler() {
-            public void handle(Event event) {initPosChanged();}
-        });
-
-        initYField.setOnAction(new EventHandler() {
-            public void handle(Event event) {initPosChanged();}
-        });
+        autoNameField.setOnAction(event -> autoNameChanged());
+        specArmPosField.setOnAction(event -> specArmPosChanged());
+        startDragPosField.setOnAction(event -> startDragPosChanged());
+        initXField.setOnAction(event -> initPosChanged());
+        initYField.setOnAction(event -> initPosChanged());
 
         specArmPosField.setText("0.22"); // this is the left servos standby position
         specArmPosField.setDisable(true);
@@ -196,7 +194,7 @@ public class WindowController {
 
     }
 
-    // info listeners
+    /*---------- Info Listeners ----------*/
 
     private void pathModeChanged() {
 
@@ -204,7 +202,7 @@ public class WindowController {
 
         if (selectIndex != -1) {
 
-            pathMode = (String) pathModeDropdown.getItems().get(selectIndex);
+            pathMode = pathModeDropdown.getItems().get(selectIndex);
             //System.out.println("new PathMode: " + pathMode);
 
             setPathDesignVisible(false);
@@ -215,12 +213,13 @@ public class WindowController {
                 case "Design":
 
                     setPathDesignVisible(true);
+                    System.out.println(true);
                     break;
                 case "Edit Components":
 
                     setPathEditVisible(true);
-                    resetField();
-                    redrawPath(Color.RED);
+//                    resetField();
+//                    redrawPath(Color.RED);
                     break;
                 case "Rigid Transform":
 
@@ -230,13 +229,28 @@ public class WindowController {
         }
     }
 
+    private void pathColorChanged() {
+
+        currentPathColor = currentPathColorPicker.getValue();
+    }
+
+    private void pathComponentSnapChanged() {
+
+        int selectIndex = pathComponentSnapDropdown.getSelectionModel().getSelectedIndex();
+
+        if (selectIndex != -1) {
+
+            pathComponentSnap = pathComponentSnapDropdown.getItems().get(selectIndex);
+        }
+    }
+
     private void defStoneDropdownChanged() {
 
         int selectIndex = defStoneDropdown.getSelectionModel().getSelectedIndex();
 
         if (selectIndex != -1) {
 
-            String newlySelected = (String) defStoneDropdown.getItems().get(selectIndex);
+            String newlySelected = defStoneDropdown.getItems().get(selectIndex);
             //System.out.println("new Default Stone Dropdown value: " + newlySelected);
         }
     }
@@ -247,7 +261,7 @@ public class WindowController {
 
         if (selectIndex != -1) {
 
-            String newlySelected = (String) allianceDropdown.getItems().get(selectIndex);
+            String newlySelected = allianceDropdown.getItems().get(selectIndex);
             //System.out.println("new Alliance Dropdown value: " + newlySelected);
 
             if (newlySelected.equals("Red")) {
@@ -276,7 +290,7 @@ public class WindowController {
 
         if (selectIndex != -1) {
 
-            String newlySelected = (String) initGrabDropdown.getItems().get(selectIndex);
+            String newlySelected = initGrabDropdown.getItems().get(selectIndex);
             //System.out.println("new Grab Dropdown value: " + newlySelected);
         }
     }
@@ -287,7 +301,7 @@ public class WindowController {
 
         if (selectIndex != -1) {
 
-            String newlySelected = (String) initArmDropdown.getItems().get(selectIndex);
+            String newlySelected = initArmDropdown.getItems().get(selectIndex);
             //System.out.println("new Arm Dropdown value: " + newlySelected);
 
             if (newlySelected.equals("Specific")) {
@@ -316,14 +330,14 @@ public class WindowController {
 
     }
 
-    //javaFX convenience
+    /*---------- JavaFX Convenience Methods ----------*/
     public void setVisible(boolean show, Node component) {
 
-        component.setVisible(false);
+        component.setVisible(show);
         component.managedProperty().bind(component.visibleProperty());
     }
 
-    // data manipulation/internal processing
+    /*---------- Data Manipulation/Internal Processing ----------*/
 
     public double normalizeAngle(double degrees) {
 
@@ -353,9 +367,17 @@ public class WindowController {
         System.out.println("Mouse pressed at: " + mouseClick);
 
         Vector2D prevPos = getCurrentPathPos();
-        orderedPathVectors.add(Vector2D.sub(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch), prevPos));
-        drawVector(fieldDisplay, Vector2D.scaleComp(prevPos, pixelsPerInch), mouseClick, Color.LAWNGREEN);
 
+        if (pathComponentSnap.equals("Vertical")) {
+
+            mouseClick.setComponent(0, prevPos.getComponent(0) * pixelsPerInch);
+        } else if (pathComponentSnap.equals("Horizontal")) {
+
+            mouseClick.setComponent(1, prevPos.getComponent(1) * pixelsPerInch);
+        }
+
+        orderedPathVectors.add(Vector2D.sub(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch), prevPos));
+        drawVector(fieldDisplay, Vector2D.scaleComp(prevPos, pixelsPerInch), mouseClick, currentPathColor);
         System.out.println("Path Length: " + orderedPathVectors.size());
     }
 
@@ -437,7 +459,7 @@ public class WindowController {
 
             Vector2D pathVector = Vector2D.sub(termPoint, initPoint);
             double angle = pathVector.getTheta();
-            double triangleSideMagnitude = 10;
+            double triangleSideMagnitude = 13;
 
             double[] xPoints = new double[3];
             double[] yPoints = new double[3];
@@ -463,6 +485,10 @@ public class WindowController {
 
     private void setPathDesignVisible(boolean show) { // displays or hides the Nodes associated with designing the path (Selecting points, editing position, Defining Curves)
 
+        setVisible(show, pathColorSetText);
+        setVisible(show, currentPathColorPicker);
+        setVisible(show, compSnapText);
+        setVisible(show, pathComponentSnapDropdown);
     }
 
     private void setPathEditVisible(boolean show) { // displays or hides the Nodes associated with selecting path components and editing properties (Path type, Speed, Color, etc.)
@@ -472,6 +498,8 @@ public class WindowController {
     private void setPathRTVisible(boolean show) { // displays or hides the Nodes associated with transforming the path rigidly (Rotation, Translation, Reflection)
 
     }
+
+    /*---------- Testers ----------*/
 
     private void vectorDrawTester() {
 

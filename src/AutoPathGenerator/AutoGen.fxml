@@ -21,7 +21,7 @@
                   <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                </rowConstraints>
                <children>
-                  <GridPane prefHeight="600.0" prefWidth="470.0" GridPane.columnIndex="1">
+                  <GridPane alignment="CENTER" prefHeight="600.0" prefWidth="470.0" GridPane.columnIndex="1">
                     <columnConstraints>
                       <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
                       <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
@@ -46,23 +46,36 @@
                               <Font size="24.0" />
                            </font>
                         </Label>
-                        <ChoiceBox fx:id="pathModeDropdown" prefWidth="150.0" GridPane.halignment="CENTER" GridPane.valignment="BOTTOM">
+                        <ChoiceBox fx:id="pathModeDropdown" prefWidth="150.0" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.valignment="BOTTOM">
                            <GridPane.margin>
-                              <Insets bottom="20.0" />
+                              <Insets bottom="10.0" />
                            </GridPane.margin>
                         </ChoiceBox>
-                        <ColorPicker GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
+                        <ColorPicker fx:id="currentPathColorPicker" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
                            <GridPane.margin>
                               <Insets top="10.0" />
                            </GridPane.margin>
                         </ColorPicker>
-                        <Label text="Set Current Path Color:" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="TOP">
+                        <Label fx:id="pathColorSetText" text="Set Current Path Color:" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="TOP">
                            <GridPane.margin>
                               <Insets top="15.0" />
                            </GridPane.margin>
                            <font>
                               <Font size="15.0" />
                            </font>
+                        </Label>
+                        <ChoiceBox fx:id="pathComponentSnapDropdown" prefWidth="150.0" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
+                           <GridPane.margin>
+                              <Insets top="15.0" />
+                           </GridPane.margin>
+                        </ChoiceBox>
+                        <Label fx:id="compSnapText" text="Path Component Snap" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
+                           <font>
+                              <Font size="15.0" />
+                           </font>
+                           <GridPane.margin>
+                              <Insets top="15.0" />
+                           </GridPane.margin>
                         </Label>
                      </children>
                   </GridPane>
