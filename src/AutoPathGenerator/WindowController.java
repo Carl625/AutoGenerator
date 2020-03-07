@@ -1,11 +1,9 @@
 package AutoPathGenerator;
 
 import Resources.Vector2D;
-import com.sun.prism.paint.Paint;
-import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.CheckBox;
@@ -19,20 +17,31 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class WindowController {
 
+    /*---------- Path Specification Variables ----------*/
+
     //display variables
     public Canvas fieldDisplay;
-    public GraphicsContext graphics;
-    public Image field;
+    private GraphicsContext graphics;
+    private Image field;
 
+    //Path editing and definition variables
+    public ChoiceBox pathModeDropdown;
+    private String pathMode;
+
+    //Point editing and definition variables
+
+    /*---------- Auto Initialization Variables ----------*/
     //Checkboxes
     public CheckBox visionInitCheckBox;
     public CheckBox scnBeforeStartCheckBox;
     public CheckBox intakeDeployCheckBox;
     public CheckBox IMUInitCheckBox;
-    public CheckBox skystonePosGenCheckBox;
+    public CheckBox skystonePosAbsGenCheckBox;
+    public CheckBox skystonePosRelGenCheckBox;
 
     // drodowns
     public ChoiceBox defStoneDropdown;
@@ -44,9 +53,12 @@ public class WindowController {
     public TextField autoNameField;
     public TextField specArmPosField;
     public TextField startDragPosField;
+    public TextField initYField;
+    public TextField initXField;
 
     //internal variables
     private ArrayList<Vector2D> orderedPathVectors;
+    private Vector2D initialPos;
     private double pixelsPerInch = (700.0 / (24.0 * 6.0)); // 700x700 pixel image of a 12ft x 12ft field
 
     public void initialize() {
@@ -64,8 +76,6 @@ public class WindowController {
         initAutoInit();
         initAutoMisc();
         initAutoGen();
-
-        vectorDrawTester();
     }
 
     private void initPathSpec() {
@@ -79,10 +89,39 @@ public class WindowController {
 
         graphics = fieldDisplay.getGraphicsContext2D();
         resetField();
+
+        initialPos = new Vector2D(63, -36);
+
+        //Path editing and definition initialization
+        initPathDef();
+
+        //Point editing and definition initialization
+        initPointDef();
+
+        //testers
+        //vectorDrawTester();
+    }
+
+    private void initPathDef() {
+
+        pathModeDropdown.getItems().clear();
+        pathModeDropdown.getItems().add("Design");
+        pathModeDropdown.getItems().add("Edit Components");
+        pathModeDropdown.getItems().add("Rigid Transform");
+        pathModeDropdown.getSelectionModel().select(0);
+        pathModeDropdown.setOnAction(new EventHandler() {
+            public void handle(Event event) {pathModeChanged();}
+        });
+
+        pathMode = (String) pathModeDropdown.getItems().get(0);
+    }
+
+    private void initPointDef() {
     }
 
     private void initAutoInit() {
 
+        // dropdown initialization
         defStoneDropdown.getItems().clear();
         defStoneDropdown.getItems().add("Left");
         defStoneDropdown.getItems().add("Middle");
@@ -119,9 +158,32 @@ public class WindowController {
             public void handle(Event event) {armDropdownChanged();}
         });
 
-        autoNameField.setText("Autonomous X Red");
+        // field initialization
+        autoNameField.setOnAction(new EventHandler() {
+            public void handle(Event event) {autoNameChanged();}
+        });
+
+        specArmPosField.setOnAction(new EventHandler() {
+            public void handle(Event event) {specArmPosChanged();}
+        });
+
+        startDragPosField.setOnAction(new EventHandler() {
+            public void handle(Event event) {startDragPosChanged();}
+        });
+
+        initXField.setOnAction(new EventHandler() {
+            public void handle(Event event) {initPosChanged();}
+        });
+
+        initYField.setOnAction(new EventHandler() {
+            public void handle(Event event) {initPosChanged();}
+        });
+
         specArmPosField.setText("0.22"); // this is the left servos standby position
         specArmPosField.setDisable(true);
+
+        initXField.setText("63");
+        initYField.setText("-36");
     }
 
     private void initAutoMisc() {
@@ -135,6 +197,38 @@ public class WindowController {
     }
 
     // info listeners
+
+    private void pathModeChanged() {
+
+        int selectIndex = pathModeDropdown.getSelectionModel().getSelectedIndex();
+
+        if (selectIndex != -1) {
+
+            pathMode = (String) pathModeDropdown.getItems().get(selectIndex);
+            //System.out.println("new PathMode: " + pathMode);
+
+            setPathDesignVisible(false);
+            setPathEditVisible(false);
+            setPathRTVisible(false);
+
+            switch (pathMode) {
+                case "Design":
+
+                    setPathDesignVisible(true);
+                    break;
+                case "Edit Components":
+
+                    setPathEditVisible(true);
+                    resetField();
+                    redrawPath(Color.RED);
+                    break;
+                case "Rigid Transform":
+
+                    setPathRTVisible(true);
+                    break;
+            }
+        }
+    }
 
     private void defStoneDropdownChanged() {
 
@@ -155,6 +249,24 @@ public class WindowController {
 
             String newlySelected = (String) allianceDropdown.getItems().get(selectIndex);
             //System.out.println("new Alliance Dropdown value: " + newlySelected);
+
+            if (newlySelected.equals("Red")) {
+
+                if (initialPos.equals(new Vector2D(-63, -36))) {
+
+                    initialPos = new Vector2D(63, -36);
+                    initXField.setText(initialPos.getComponent(0).toString());
+                    initYField.setText(initialPos.getComponent(1).toString());
+                }
+            } else if (newlySelected.equals("Blue")) {
+
+                if (initialPos.equals(new Vector2D(63, -36))) {
+
+                    initialPos = new Vector2D(-63, -36);
+                    initXField.setText(initialPos.getComponent(0).toString());
+                    initYField.setText(initialPos.getComponent(1).toString());
+                }
+            }
         }
     }
 
@@ -187,6 +299,29 @@ public class WindowController {
             }
         }
     }
+    
+    private void autoNameChanged() {
+        
+    }
+    
+    private void specArmPosChanged() {
+        
+    }
+
+    private void startDragPosChanged() {
+        
+    }
+    
+    private void initPosChanged() {
+
+    }
+
+    //javaFX convenience
+    public void setVisible(boolean show, Node component) {
+
+        component.setVisible(false);
+        component.managedProperty().bind(component.visibleProperty());
+    }
 
     // data manipulation/internal processing
 
@@ -207,13 +342,76 @@ public class WindowController {
 
     public void fieldClicked(MouseEvent mouseEvent) {
         Vector2D mouseClick = new Vector2D(mouseEvent.getSceneX() - fieldDisplay.getLayoutX(), mouseEvent.getSceneY() - fieldDisplay.getLayoutY());
+        Vector2D mouseCorrection = new Vector2D(0, -28);
+        mouseClick.add(mouseCorrection);
 
+        double xOffset = fieldDisplay.getWidth() / 2.0;
+        double yOffset = fieldDisplay.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        mouseClick.sub(centerOffset);
+        mouseClick.flipDimension(1);
+        System.out.println("Mouse pressed at: " + mouseClick);
 
+        Vector2D prevPos = getCurrentPathPos();
+        orderedPathVectors.add(Vector2D.sub(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch), prevPos));
+        drawVector(fieldDisplay, Vector2D.scaleComp(prevPos, pixelsPerInch), mouseClick, Color.LAWNGREEN);
+
+        System.out.println("Path Length: " + orderedPathVectors.size());
     }
 
     private void resetField() {
 
         graphics.drawImage(field, 0, 0);
+    }
+
+    private void redrawPath() {
+
+        redrawPath(new Color[0]);
+    }
+
+    private void redrawPath(Color pathColor) {
+
+        redrawPath(Collections.nCopies(orderedPathVectors.size(), pathColor).toArray(new Color[0]));
+    }
+
+    private void redrawPath(Color[] pathColors) {
+
+        Vector2D currentPos = new Vector2D(initialPos);
+
+        if (pathColors.length >= orderedPathVectors.size()) {
+
+            for (int v = 0; v < orderedPathVectors.size(); v++) {
+
+                drawVectorInch(fieldDisplay, currentPos, Vector2D.add(currentPos, orderedPathVectors.get(v)), pathColors[v]);
+                currentPos.add(orderedPathVectors.get(v));
+            }
+        } else { // if the list is less than the length is defaults to LAWNGREEN for the rest of the path components
+
+            for (int v = 0; v < orderedPathVectors.size(); v++) {
+
+                Color pathColor = Color.LAWNGREEN;
+
+                if (v < pathColors.length) {
+
+                    pathColor = pathColors[v];
+                }
+
+                drawVectorInch(fieldDisplay, currentPos, Vector2D.add(currentPos, orderedPathVectors.get(v)), pathColor);
+                currentPos.add(orderedPathVectors.get(v));
+            }
+        }
+    }
+
+    public Vector2D getCurrentPathPos() {
+
+        Vector2D currentPos = new Vector2D(initialPos);
+
+        for (int v = 0; v < orderedPathVectors.size(); v++) {
+
+            currentPos.add(orderedPathVectors.get(v));
+        }
+
+        return currentPos;
     }
 
     private void drawVectorInch(Canvas c, Vector2D initPoint, Vector2D termPoint, Color arrowColor) {
@@ -223,6 +421,8 @@ public class WindowController {
 
     private void drawVector(Canvas c, Vector2D initPoint, Vector2D termPoint, Color arrowColor) {
 
+        initPoint.flipDimension(1);
+        termPoint.flipDimension(1);
         double xOffset = c.getWidth() / 2.0;
         double yOffset = c.getHeight() / 2.0;
         Vector2D centerOffset = new Vector2D(xOffset, yOffset);
@@ -236,12 +436,10 @@ public class WindowController {
             g.setFill(arrowColor);
 
             Vector2D pathVector = Vector2D.sub(termPoint, initPoint);
-            System.out.println(pathVector);
             double angle = pathVector.getTheta();
-            System.out.println(Math.toDegrees(angle));
             double triangleSideMagnitude = 10;
 
-            double[] xPoints = new double[3]; //TODO: finish these so the edges of the triangles are pointing in the direction of the vector
+            double[] xPoints = new double[3];
             double[] yPoints = new double[3];
 
             //tip
@@ -259,15 +457,32 @@ public class WindowController {
             yPoints[2] = tip2.getComponent(1);
 
             g.strokeLine(initPoint.getComponent(0), initPoint.getComponent(1), xPoints[1], yPoints[1]);
-//            System.out.println(Arrays.toString(xPoints));
-//            System.out.println(Arrays.toString(yPoints));
             g.fillPolygon(xPoints, yPoints, 3);
         }
+    }
+
+    private void setPathDesignVisible(boolean show) { // displays or hides the Nodes associated with designing the path (Selecting points, editing position, Defining Curves)
+
+    }
+
+    private void setPathEditVisible(boolean show) { // displays or hides the Nodes associated with selecting path components and editing properties (Path type, Speed, Color, etc.)
+
+    }
+
+    private void setPathRTVisible(boolean show) { // displays or hides the Nodes associated with transforming the path rigidly (Rotation, Translation, Reflection)
+
     }
 
     private void vectorDrawTester() {
 
         drawVectorInch(fieldDisplay, new Vector2D(0, 0), new Vector2D(36, 36), Color.LAWNGREEN);
         drawVectorInch(fieldDisplay, new Vector2D(36, 36), new Vector2D(36, -36), Color.LAWNGREEN);
+
+        for (int theta = 0; theta < 360; theta += 12) {
+
+            drawVectorInch(fieldDisplay, new Vector2D(0, 0), new Vector2D(theta, 36, false), Color.LAWNGREEN);
+//            System.out.println("Loop theta: " + theta);
+        }
+        System.out.println("Finished!");
     }
 }

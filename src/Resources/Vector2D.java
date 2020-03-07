@@ -52,36 +52,38 @@ public class Vector2D {
     public void genAngles() {
         genMag();
 
-        if (components[0] == 0 && components[1] == 0) {
-            theta = 0;
-        } else {
+//        if (components[0] == 0 && components[1] == 0) {
+////            theta = 0;
+////        } else {
+////
+////            if (components[0] == 0) {
+////
+////                theta = Math.PI / 2;
+////
+////                if (components[1] < 0) {
+////                    theta *= -1;
+////                }
+////            } else {
+////
+////                theta = Math.atan(components[1] / components[0]);
+////                //theta = Math.atan(components[1] / components[0]);
+////
+////                if (components[0] < 0) {
+////
+////                    if (components[1] >= 0) {
+////
+////                        theta += Math.PI;
+////                    } else if (components[1] < 0) {
+////                        theta -= Math.PI;
+////                    } else {
+////
+////                        theta = Math.PI;
+////                    }
+////                }
+////            }
+////        }
 
-            if (components[0] == 0) {
-
-                theta = Math.PI / 2;
-
-                if (components[1] < 0) {
-                    theta *= -1;
-                }
-            } else {
-
-                theta = Math.atan2(components[1], components[0]);
-                //theta = Math.atan(components[1] / components[0]);
-
-                if (components[0] < 0) {
-
-                    if (components[1] >= 0) {
-
-                        theta += Math.PI;
-                    } else if (components[1] < 0) {
-                        theta -= Math.PI;
-                    } else {
-
-                        theta = Math.PI;
-                    }
-                }
-            }
-        }
+        theta = Math.atan2(components[1], components[0]);
     }
 
     public void setName(String newName) {
