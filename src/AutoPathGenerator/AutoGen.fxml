@@ -32,6 +32,8 @@
                       <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                     </rowConstraints>
                      <children>
                         <Label text="Path" GridPane.halignment="CENTER" GridPane.valignment="CENTER">
@@ -49,6 +51,19 @@
                               <Insets bottom="20.0" />
                            </GridPane.margin>
                         </ChoiceBox>
+                        <ColorPicker GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
+                           <GridPane.margin>
+                              <Insets top="10.0" />
+                           </GridPane.margin>
+                        </ColorPicker>
+                        <Label text="Set Current Path Color:" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="TOP">
+                           <GridPane.margin>
+                              <Insets top="15.0" />
+                           </GridPane.margin>
+                           <font>
+                              <Font size="15.0" />
+                           </font>
+                        </Label>
                      </children>
                   </GridPane>
                   <Canvas fx:id="fieldDisplay" height="700.0" onMouseClicked="#fieldClicked" width="700.0" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />
