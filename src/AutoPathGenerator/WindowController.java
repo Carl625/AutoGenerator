@@ -9,7 +9,6 @@ import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -25,10 +24,14 @@ public class WindowController {
     private Image field;
     private Image robot;
 
-    //Path editing and definition variables
+    //Editing and definition variables
     public ChoiceBox<String> pathModeDropdown;
     private String pathMode;
 
+    public Label pathText;
+    public Label pointText;
+
+    // design
     public Label pathColorSetText;
     public ColorPicker currentPathColorPicker;
     private Color currentPathColor;
@@ -37,13 +40,15 @@ public class WindowController {
     public ChoiceBox<String> pathComponentSnapDropdown;
     private String pathComponentSnap;
 
-    //Point editing and definition variables
     public CheckBox drawPointCheckBox;
     private boolean drawPoint;
 
     public Label pointColorSetText;
     public ColorPicker pointColorPicker;
     private Color currentPointColor;
+
+    // editing
+    public Label editSelectCompLabel;
 
     /*---------- Auto Initialization Variables ----------*/
     //Checkboxes
@@ -108,6 +113,7 @@ public class WindowController {
         resetField();
 
         initialPos = new Vector2D(63, -36);
+        pointColors.add(currentPointColor);
         redrawPoints();
 
         //Path editing and definition initialization
@@ -145,6 +151,8 @@ public class WindowController {
         pathComponentSnapDropdown.setOnAction(event -> pathComponentSnapChanged());
 
         //point design
+        drawPointCheckBox.setOnAction(event -> drawPointChanged());
+
         drawPoint = drawPointCheckBox.isSelected();
 
         pointColorPicker.setValue(Color.RED);
@@ -235,7 +243,6 @@ public class WindowController {
                 case "Design":
 
                     setPathDesignVisible(true);
-                    System.out.println(true);
                     break;
                 case "Edit Components":
 
@@ -252,6 +259,19 @@ public class WindowController {
     private void pathColorChanged() {
 
         currentPathColor = currentPathColorPicker.getValue();
+    }
+
+    private void drawPointChanged() {
+
+        drawPoint = drawPointCheckBox.isSelected();
+        resetField();
+
+        if (drawPoint) {
+
+            redrawPoints();
+        }
+
+        redrawPath();
     }
 
     private void pointColorChanged() {
@@ -408,6 +428,25 @@ public class WindowController {
         return degrees;
     }
 
+    public Vector2D getCurrentPathPos() {
+
+        Vector2D currentPos = new Vector2D(initialPos);
+
+        for (int v = 0; v < orderedPathVectors.size(); v++) {
+
+            currentPos.add(orderedPathVectors.get(v));
+        }
+
+        return currentPos;
+    }
+
+    public Vector2D[] getPathCompInRadiusInch(Vector2D fieldPos, double radius) {
+
+        ArrayList<Vector2D> interceptingPathComponents = new ArrayList<Vector2D>();
+        //TODO: figure out how to systemically caluclate if a vector representation of a line intersects a circle
+        return (interceptingPathComponents.toArray(new Vector2D[0]));
+    }
+
     public void fieldClicked(MouseEvent mouseEvent) {
         Vector2D mouseClick = new Vector2D(mouseEvent.getSceneX() - fieldDisplay.getLayoutX(), mouseEvent.getSceneY() - fieldDisplay.getLayoutY());
         Vector2D mouseCorrection = new Vector2D(0, -28);
@@ -433,19 +472,22 @@ public class WindowController {
                     mouseClick.setComponent(1, prevPos.getComponent(1) * pixelsPerInch);
                 }
 
-                // draw and store point properties
-                pointColors.add(currentPointColor);
-                drawPoint(fieldDisplay, mouseClick, currentPointColor,15);
+                if (drawPoint) {
+
+                    // draw and store point properties
+                    pointColors.add(currentPointColor);
+                    drawPoint(fieldDisplay, mouseClick, currentPointColor,15);
+                }
 
                 // draw and store vector properties
                 orderedPathVectors.add(Vector2D.sub(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch), prevPos));
                 pathColors.add(currentPathColor);
                 drawVector(fieldDisplay, Vector2D.scaleComp(prevPos, pixelsPerInch), mouseClick, currentPathColor);
 
-
                 System.out.println("Path Length: " + orderedPathVectors.size());
                 break;
             case "Edit Components":
+
 
                 break;
             case "Rigid Transform":
@@ -478,7 +520,7 @@ public class WindowController {
 
         Vector2D currentPos = new Vector2D(initialPos);
 
-        redrawPoints();
+        drawPointInch(fieldDisplay, initialPos, pointColors.get(0), 15);
 
 //        if (pathColors.length >= orderedPathVectors.size()) {
 //
@@ -504,18 +546,6 @@ public class WindowController {
             drawVectorInch(fieldDisplay, currentPos, Vector2D.add(currentPos, orderedPathVectors.get(v)), pathColor);
             currentPos.add(orderedPathVectors.get(v));
         }
-    }
-
-    public Vector2D getCurrentPathPos() {
-
-        Vector2D currentPos = new Vector2D(initialPos);
-
-        for (int v = 0; v < orderedPathVectors.size(); v++) {
-
-            currentPos.add(orderedPathVectors.get(v));
-        }
-
-        return currentPos;
     }
 
     private void drawVectorInch(Canvas c, Vector2D initPoint, Vector2D termPoint, Color arrowColor) {
@@ -657,19 +687,26 @@ public class WindowController {
 
     private void setPathDesignVisible(boolean show) { // displays or hides the Nodes associated with designing the path (Selecting points, editing position, Defining Curves)
         //path
+        setVisible(show, pathText);
         setVisible(show, pathColorSetText);
         setVisible(show, currentPathColorPicker);
         setVisible(show, compSnapText);
         setVisible(show, pathComponentSnapDropdown);
 
         //point
+        setVisible(show, pointText);
         setVisible(show, drawPointCheckBox);
         setVisible(show, pointColorSetText);
         setVisible(show, pointColorPicker);
     }
 
     private void setPathEditVisible(boolean show) { // displays or hides the Nodes associated with selecting path components and editing properties (Path type, Speed, Color, etc.)
+        //path
+        setVisible(show, pathText);
+        setVisible(show, editSelectCompLabel);
 
+        //point
+        setVisible(show, pointText);
     }
 
     private void setPathRTVisible(boolean show) { // displays or hides the Nodes associated with transforming the path rigidly (Rotation, Translation, Reflection)

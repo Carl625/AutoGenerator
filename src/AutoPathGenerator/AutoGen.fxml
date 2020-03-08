@@ -36,40 +36,46 @@
                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                     </rowConstraints>
                      <children>
-                        <Label text="Path" GridPane.halignment="CENTER" GridPane.valignment="CENTER">
+                        <Label fx:id="pathText" text="Path" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="TOP">
                            <font>
                               <Font size="24.0" />
                            </font>
-                        </Label>
-                        <Label text="Point" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.valignment="CENTER">
-                           <font>
-                              <Font size="24.0" />
-                           </font>
-                        </Label>
-                        <ChoiceBox fx:id="pathModeDropdown" prefWidth="150.0" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.valignment="BOTTOM">
                            <GridPane.margin>
-                              <Insets bottom="10.0" />
+                              <Insets top="10.0" />
+                           </GridPane.margin>
+                        </Label>
+                        <Label fx:id="pointText" text="Point" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="TOP">
+                           <font>
+                              <Font size="24.0" />
+                           </font>
+                           <GridPane.margin>
+                              <Insets top="10.0" />
+                           </GridPane.margin>
+                        </Label>
+                        <ChoiceBox fx:id="pathModeDropdown" prefWidth="150.0" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.valignment="CENTER">
+                           <GridPane.margin>
+                              <Insets top="30.0" />
                            </GridPane.margin>
                         </ChoiceBox>
-                        <ColorPicker fx:id="currentPathColorPicker" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
+                        <ColorPicker fx:id="currentPathColorPicker" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
                            <GridPane.margin>
                               <Insets top="10.0" />
                            </GridPane.margin>
                         </ColorPicker>
-                        <Label fx:id="pathColorSetText" text="Set Current Path Color:" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="TOP">
+                        <Label fx:id="pathColorSetText" text="Set Current Path Color:" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
                            <GridPane.margin>
-                              <Insets top="15.0" />
+                              <Insets top="10.0" />
                            </GridPane.margin>
                            <font>
                               <Font size="15.0" />
                            </font>
                         </Label>
-                        <ChoiceBox fx:id="pathComponentSnapDropdown" prefWidth="150.0" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
+                        <ChoiceBox fx:id="pathComponentSnapDropdown" prefWidth="150.0" GridPane.halignment="CENTER" GridPane.rowIndex="3" GridPane.valignment="CENTER">
                            <GridPane.margin>
                               <Insets top="15.0" />
                            </GridPane.margin>
                         </ChoiceBox>
-                        <Label fx:id="compSnapText" text="Path Component Snap" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
+                        <Label fx:id="compSnapText" text="Path Component Snap" GridPane.halignment="CENTER" GridPane.rowIndex="3" GridPane.valignment="TOP">
                            <font>
                               <Font size="15.0" />
                            </font>
@@ -81,13 +87,16 @@
                            <font>
                               <Font size="14.0" />
                            </font>
+                           <GridPane.margin>
+                              <Insets top="20.0" />
+                           </GridPane.margin>
                         </CheckBox>
                         <Label fx:id="pointColorSetText" text="Set Current Point Color" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
                            <font>
                               <Font size="15.0" />
                            </font>
                            <GridPane.margin>
-                              <Insets top="15.0" />
+                              <Insets top="10.0" />
                            </GridPane.margin>
                         </Label>
                         <ColorPicker fx:id="pointColorPicker" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
@@ -95,6 +104,22 @@
                               <Insets top="10.0" />
                            </GridPane.margin>
                         </ColorPicker>
+                        <Label text="Path Mode" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.valignment="TOP">
+                           <GridPane.margin>
+                              <Insets top="15.0" />
+                           </GridPane.margin>
+                           <font>
+                              <Font size="18.0" />
+                           </font>
+                        </Label>
+                        <Label fx:id="editSelectCompLabel" text="Selected Component:" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
+                           <GridPane.margin>
+                              <Insets top="20.0" />
+                           </GridPane.margin>
+                           <font>
+                              <Font size="14.0" />
+                           </font>
+                        </Label>
                      </children>
                   </GridPane>
                   <Canvas fx:id="fieldDisplay" height="700.0" onMouseClicked="#fieldClicked" width="700.0" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />
