@@ -9,6 +9,7 @@ import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ public class WindowController {
     public Canvas fieldDisplay;
     private GraphicsContext graphics;
     private Image field;
+    private Image robot;
 
     //Path editing and definition variables
     public ChoiceBox<String> pathModeDropdown;
@@ -36,6 +38,12 @@ public class WindowController {
     private String pathComponentSnap;
 
     //Point editing and definition variables
+    public CheckBox drawPointCheckBox;
+    private boolean drawPoint;
+
+    public Label pointColorSetText;
+    public ColorPicker pointColorPicker;
+    private Color currentPointColor;
 
     /*---------- Auto Initialization Variables ----------*/
     //Checkboxes
@@ -61,16 +69,20 @@ public class WindowController {
 
     /*---------- Internal Variables ----------*/
     private ArrayList<Vector2D> orderedPathVectors;
+    private ArrayList<Color> pathColors;
+    private ArrayList<Color> pointColors;
     private Vector2D initialPos;
-    private double pixelsPerInch = (700.0 / (24.0 * 6.0)); // 700x700 pixel image of a 12ft x 12ft field
+    private double pixelsPerInch = (670.0 / (24.0 * 6.0)); // 700x700 pixel image of a 12ft x 12ft field
 
     public void initialize() {
 
-        // init graphics
-        initTabs();
-
         //init internal variables
         orderedPathVectors = new ArrayList<Vector2D>();
+        pathColors = new ArrayList<Color>();
+        pointColors = new ArrayList<Color>();
+
+        // init graphics
+        initTabs();
     }
 
     private void initTabs() {
@@ -86,6 +98,8 @@ public class WindowController {
         try {
             FileInputStream f = new FileInputStream("../AutoGenerator/src/Resources/Images/topviewfield.png");
             field = new Image(f);
+            f = new FileInputStream("../AutoGenerator/src/Resources/Images/RobotAssemblyNoBkg.png");
+            robot = new Image(f);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -94,6 +108,7 @@ public class WindowController {
         resetField();
 
         initialPos = new Vector2D(63, -36);
+        redrawPoints();
 
         //Path editing and definition initialization
         initPathDef();
@@ -130,6 +145,13 @@ public class WindowController {
         pathComponentSnapDropdown.setOnAction(event -> pathComponentSnapChanged());
 
         //point design
+        drawPoint = drawPointCheckBox.isSelected();
+
+        pointColorPicker.setValue(Color.RED);
+        pointColorPicker.setOnAction(event -> pointColorChanged());
+
+        currentPointColor = pointColorPicker.getValue();
+
 
         //path editing
 
@@ -218,8 +240,6 @@ public class WindowController {
                 case "Edit Components":
 
                     setPathEditVisible(true);
-//                    resetField();
-//                    redrawPath(Color.RED);
                     break;
                 case "Rigid Transform":
 
@@ -232,6 +252,11 @@ public class WindowController {
     private void pathColorChanged() {
 
         currentPathColor = currentPathColorPicker.getValue();
+    }
+
+    private void pointColorChanged() {
+
+        currentPointColor = pointColorPicker.getValue();
     }
 
     private void pathComponentSnapChanged() {
@@ -328,6 +353,35 @@ public class WindowController {
     
     private void initPosChanged() {
 
+        boolean valid = false;
+        double x = initialPos.getComponent(0);
+        double y = initialPos.getComponent(1);
+
+        try {
+
+            x = Double.parseDouble(initXField.getText());
+            y = Double.parseDouble(initYField.getText());
+            valid = true;
+        } catch (NumberFormatException e) {
+
+            x = initialPos.getComponent(0);
+            y = initialPos.getComponent(1);
+        }
+
+        if (valid && (orderedPathVectors.size() > 0)) {
+
+            Vector2D newFirst = Vector2D.add(initialPos, orderedPathVectors.get(0));
+            newFirst = Vector2D.sub(newFirst, new Vector2D(x, y));
+            orderedPathVectors.set(0, newFirst);
+        }
+
+        initialPos = new Vector2D(x, y);
+
+        if (valid) {
+
+            resetField();
+            redrawPath(pathColors.toArray(new Color[0]));
+        }
     }
 
     /*---------- JavaFX Convenience Methods ----------*/
@@ -366,24 +420,48 @@ public class WindowController {
         mouseClick.flipDimension(1);
         System.out.println("Mouse pressed at: " + mouseClick);
 
-        Vector2D prevPos = getCurrentPathPos();
+        switch (pathMode) {
+            case "Design":
 
-        if (pathComponentSnap.equals("Vertical")) {
+                Vector2D prevPos = getCurrentPathPos();
 
-            mouseClick.setComponent(0, prevPos.getComponent(0) * pixelsPerInch);
-        } else if (pathComponentSnap.equals("Horizontal")) {
+                if (pathComponentSnap.equals("Vertical")) {
 
-            mouseClick.setComponent(1, prevPos.getComponent(1) * pixelsPerInch);
+                    mouseClick.setComponent(0, prevPos.getComponent(0) * pixelsPerInch);
+                } else if (pathComponentSnap.equals("Horizontal")) {
+
+                    mouseClick.setComponent(1, prevPos.getComponent(1) * pixelsPerInch);
+                }
+
+                // draw and store point properties
+                pointColors.add(currentPointColor);
+                drawPoint(fieldDisplay, mouseClick, currentPointColor,15);
+
+                // draw and store vector properties
+                orderedPathVectors.add(Vector2D.sub(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch), prevPos));
+                pathColors.add(currentPathColor);
+                drawVector(fieldDisplay, Vector2D.scaleComp(prevPos, pixelsPerInch), mouseClick, currentPathColor);
+
+
+                System.out.println("Path Length: " + orderedPathVectors.size());
+                break;
+            case "Edit Components":
+
+                break;
+            case "Rigid Transform":
+
+                break;
         }
-
-        orderedPathVectors.add(Vector2D.sub(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch), prevPos));
-        drawVector(fieldDisplay, Vector2D.scaleComp(prevPos, pixelsPerInch), mouseClick, currentPathColor);
-        System.out.println("Path Length: " + orderedPathVectors.size());
     }
 
     private void resetField() {
 
         graphics.drawImage(field, 0, 0);
+    }
+
+    private void drawRobot() {
+
+        //TODO: have this method draw the robot (with the corrective factor to have it's center at the point) and make it so that whenever a point is placed the robot appears at that point (maybe?)
     }
 
     private void redrawPath() {
@@ -400,27 +478,31 @@ public class WindowController {
 
         Vector2D currentPos = new Vector2D(initialPos);
 
-        if (pathColors.length >= orderedPathVectors.size()) {
+        redrawPoints();
 
-            for (int v = 0; v < orderedPathVectors.size(); v++) {
+//        if (pathColors.length >= orderedPathVectors.size()) {
+//
+//            for (int v = 0; v < orderedPathVectors.size(); v++) {
+//
+//                drawVectorInch(fieldDisplay, currentPos, Vector2D.add(currentPos, orderedPathVectors.get(v)), pathColors[v]);
+//                currentPos.add(orderedPathVectors.get(v));
+//            }
+//        } else { // if the list is less than the length is defaults to LAWNGREEN for the rest of the path components
+//
+//
+//        }
 
-                drawVectorInch(fieldDisplay, currentPos, Vector2D.add(currentPos, orderedPathVectors.get(v)), pathColors[v]);
-                currentPos.add(orderedPathVectors.get(v));
+        for (int v = 0; v < orderedPathVectors.size(); v++) {
+
+            Color pathColor = Color.LAWNGREEN;
+
+            if (v < pathColors.length) {
+
+                pathColor = pathColors[v];
             }
-        } else { // if the list is less than the length is defaults to LAWNGREEN for the rest of the path components
 
-            for (int v = 0; v < orderedPathVectors.size(); v++) {
-
-                Color pathColor = Color.LAWNGREEN;
-
-                if (v < pathColors.length) {
-
-                    pathColor = pathColors[v];
-                }
-
-                drawVectorInch(fieldDisplay, currentPos, Vector2D.add(currentPos, orderedPathVectors.get(v)), pathColor);
-                currentPos.add(orderedPathVectors.get(v));
-            }
+            drawVectorInch(fieldDisplay, currentPos, Vector2D.add(currentPos, orderedPathVectors.get(v)), pathColor);
+            currentPos.add(orderedPathVectors.get(v));
         }
     }
 
@@ -443,6 +525,8 @@ public class WindowController {
 
     private void drawVector(Canvas c, Vector2D initPoint, Vector2D termPoint, Color arrowColor) {
 
+        initPoint = new Vector2D(initPoint);
+        termPoint = new Vector2D(termPoint);
         initPoint.flipDimension(1);
         termPoint.flipDimension(1);
         double xOffset = c.getWidth() / 2.0;
@@ -454,6 +538,8 @@ public class WindowController {
         if (c.contains(initPoint.toPoint()) && c.contains(termPoint.toPoint())) {
 
             GraphicsContext g = c.getGraphicsContext2D();
+            Color prevStroke = (Color) g.getStroke();
+            Color prevFill = (Color) g.getFill();
             g.setStroke(arrowColor);
             g.setFill(arrowColor);
 
@@ -480,15 +566,106 @@ public class WindowController {
 
             g.strokeLine(initPoint.getComponent(0), initPoint.getComponent(1), xPoints[1], yPoints[1]);
             g.fillPolygon(xPoints, yPoints, 3);
+
+            g.setStroke(prevStroke);
+            g.setFill(prevFill);
+        }
+    }
+
+    private void redrawPoints() {
+
+        redrawPoints(new Color[0]);
+    }
+
+    private void redrawPoints(Color pointColor) {
+
+        redrawPoints(Collections.nCopies(orderedPathVectors.size() + 1, pointColor).toArray(new Color[0]));
+    }
+
+    private void redrawPoints(Color[] pointColors) {
+
+        Vector2D initPoint = new Vector2D(initialPos);
+
+        for (int p = 0; p <= orderedPathVectors.size(); p++) {
+
+            Color pointColor = Color.RED;
+
+            if (p < pointColors.length) {
+
+                pointColor = pointColors[p];
+            }
+
+            drawPointInch(fieldDisplay, initPoint, pointColor, 15);
+
+            if (p < orderedPathVectors.size()) {
+
+                initPoint.add(orderedPathVectors.get(p));
+            }
+        }
+    }
+
+    private void drawPointInch(Canvas c, Vector2D point, Color pointColor, int pointDiameter) {
+
+        drawPoint(c, Vector2D.scaleComp(point, pixelsPerInch), pointColor, pointDiameter);
+    }
+
+    private void drawPoint(Canvas c, Vector2D point, Color pointColor, int pointDiameter) {
+
+        point = new Vector2D(point);
+        point.flipDimension(1);
+
+        double xOffset = c.getWidth() / 2.0;
+        double yOffset = c.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        point.add(centerOffset);
+
+        Vector2D drawCorrection = new Vector2D(-(pointDiameter / 2.0), -(pointDiameter / 2.0));
+        point.add(drawCorrection);
+
+        GraphicsContext g = c.getGraphicsContext2D();
+
+        Color prevFill = (Color) graphics.getFill();
+        g.setFill(pointColor);
+
+        g.fillOval(point.getComponent(0), point.getComponent(1), pointDiameter, pointDiameter);
+
+        g.setFill(prevFill);
+    }
+
+    private void drawImageInch(Canvas c, Vector2D cornerPos, Image image) {
+
+        cornerPos = Vector2D.scaleComp(cornerPos, pixelsPerInch);
+        cornerPos.flipDimension(1);
+
+        double xOffset = c.getWidth() / 2.0;
+        double yOffset = c.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        cornerPos.add(centerOffset);
+
+        drawImage(c, cornerPos, image);
+    }
+
+    private void drawImage(Canvas c, Vector2D cornerPos, Image image) {
+
+        if (c.contains(cornerPos.toPoint())) {
+
+            GraphicsContext g = c.getGraphicsContext2D();
+
+            g.drawImage(image, cornerPos.getComponent(0), cornerPos.getComponent(1));
         }
     }
 
     private void setPathDesignVisible(boolean show) { // displays or hides the Nodes associated with designing the path (Selecting points, editing position, Defining Curves)
-
+        //path
         setVisible(show, pathColorSetText);
         setVisible(show, currentPathColorPicker);
         setVisible(show, compSnapText);
         setVisible(show, pathComponentSnapDropdown);
+
+        //point
+        setVisible(show, drawPointCheckBox);
+        setVisible(show, pointColorSetText);
+        setVisible(show, pointColorPicker);
     }
 
     private void setPathEditVisible(boolean show) { // displays or hides the Nodes associated with selecting path components and editing properties (Path type, Speed, Color, etc.)
