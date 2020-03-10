@@ -57,6 +57,7 @@ public class WindowController {
     public Label editSelectCompLabel;
 
     //general
+    public Label generalTextLabel;
     public Button undoButton; //TODO: code these bad boys in as soon as highlighting path pieces and editing them is done
     public Button redoButton;
     public Button clearButton;
@@ -179,6 +180,11 @@ public class WindowController {
         //path editing
 
         //point editing
+
+        //path transforms
+
+        // general
+        clearButton.setOnAction(event -> clearPath());
     }
 
     private void initPointDef() {
@@ -284,7 +290,7 @@ public class WindowController {
 
         if (drawPoint) {
 
-            redrawPoints();
+            redrawPoints(pointColors.toArray(new Color[0]));
         }
     }
 
@@ -416,6 +422,19 @@ public class WindowController {
             resetField();
             redrawPath(pathColors.toArray(new Color[0]));
         }
+    }
+
+    private void clearPath() {
+
+        orderedPathVectors.clear();
+        pathBounds.clear();
+        pathColors.clear();
+        pointColors.clear();
+        pointColors.add(currentPointColor);
+
+        resetField();
+        resetRobotDisplay();
+        redrawPath();
     }
 
     /*---------- JavaFX Convenience Methods ----------*/
@@ -633,9 +652,10 @@ public class WindowController {
                 if (drawPoint) {
 
                     // draw and store point properties
-                    pointColors.add(currentPointColor);
                     drawPoint(fieldDisplay, mouseClick, currentPointColor,6);
                 }
+
+                pointColors.add(currentPointColor);
 
                 //System.out.println("Path Length: " + orderedPathVectors.size());
                 break;
