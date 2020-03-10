@@ -1,6 +1,7 @@
 package AutoPathGenerator;
 
 import Resources.Vector2D;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -8,10 +9,13 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Polygon;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 public class WindowController {
@@ -20,7 +24,9 @@ public class WindowController {
 
     //display variables
     public Canvas fieldDisplay;
-    private GraphicsContext graphics;
+    public Canvas robotDisplay;
+    private GraphicsContext fieldGraphics;
+    private GraphicsContext robotGraphics;
     private Image field;
     private Image robot;
 
@@ -50,6 +56,11 @@ public class WindowController {
     // editing
     public Label editSelectCompLabel;
 
+    //general
+    public Button undoButton; //TODO: code these bad boys in as soon as highlighting path pieces and editing them is done
+    public Button redoButton;
+    public Button clearButton;
+
     /*---------- Auto Initialization Variables ----------*/
     //Checkboxes
     public CheckBox visionInitCheckBox;
@@ -74,6 +85,7 @@ public class WindowController {
 
     /*---------- Internal Variables ----------*/
     private ArrayList<Vector2D> orderedPathVectors;
+    private ArrayList<Polygon> pathBounds;
     private ArrayList<Color> pathColors;
     private ArrayList<Color> pointColors;
     private Vector2D initialPos;
@@ -83,6 +95,7 @@ public class WindowController {
 
         //init internal variables
         orderedPathVectors = new ArrayList<Vector2D>();
+        pathBounds = new ArrayList<Polygon>();
         pathColors = new ArrayList<Color>();
         pointColors = new ArrayList<Color>();
 
@@ -104,13 +117,15 @@ public class WindowController {
             FileInputStream f = new FileInputStream("../AutoGenerator/src/Resources/Images/topviewfield.png");
             field = new Image(f);
             f = new FileInputStream("../AutoGenerator/src/Resources/Images/RobotAssemblyNoBkg.png");
-            robot = new Image(f);
+            robot = new Image(f, 18 * pixelsPerInch, 23.037 * pixelsPerInch, true, true);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
 
-        graphics = fieldDisplay.getGraphicsContext2D();
+        fieldGraphics = fieldDisplay.getGraphicsContext2D();
         resetField();
+        robotGraphics = robotDisplay.getGraphicsContext2D(); //TODO: get one image from solidworks that is also top down but with the intake and draggers retracted and switc between then as deployIntake() is called
+        resetRobotDisplay();
 
         initialPos = new Vector2D(63, -36);
         pointColors.add(currentPointColor);
@@ -265,13 +280,12 @@ public class WindowController {
 
         drawPoint = drawPointCheckBox.isSelected();
         resetField();
+        redrawPath();
 
         if (drawPoint) {
 
             redrawPoints();
         }
-
-        redrawPath();
     }
 
     private void pointColorChanged() {
@@ -413,6 +427,34 @@ public class WindowController {
 
     /*---------- Data Manipulation/Internal Processing ----------*/
 
+    public Vector2D convertFieldToCanvas(Vector2D fieldPos) {
+
+        fieldPos = new Vector2D(fieldPos);
+        fieldPos.scale(pixelsPerInch);
+        fieldPos.flipDimension(1);
+
+        double xOffset = fieldDisplay.getWidth() / 2.0;
+        double yOffset = fieldDisplay.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        fieldPos.add(centerOffset);
+
+        return fieldPos;
+    }
+
+    public Vector2D convertCanvasToField(Vector2D canvasPos) {
+
+        canvasPos = new Vector2D(canvasPos);
+
+        double xOffset = fieldDisplay.getWidth() / 2.0;
+        double yOffset = fieldDisplay.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        canvasPos.sub(centerOffset);
+        canvasPos.flipDimension(1);
+        canvasPos.scale(1 / pixelsPerInch);
+
+        return canvasPos;
+    }
+
     public double normalizeAngle(double degrees) {
 
         while (degrees < 0) {
@@ -440,11 +482,118 @@ public class WindowController {
         return currentPos;
     }
 
-    public Vector2D[] getPathCompInRadiusInch(Vector2D fieldPos, double radius) {
+    public int[] getPathCompInRadiusInch(Vector2D fieldPos, double radius) {
 
-        ArrayList<Vector2D> interceptingPathComponents = new ArrayList<Vector2D>();
-        //TODO: figure out how to systemically caluclate if a vector representation of a line intersects a circle
-        return (interceptingPathComponents.toArray(new Vector2D[0]));
+        fieldPos.flipDimension(1);
+        fieldPos = Vector2D.add(fieldPos, new Vector2D(fieldDisplay.getWidth() / 2.0, fieldDisplay.getHeight() / 2.0));
+        ArrayList<Integer> interceptComponentIndexes = new ArrayList<Integer>();
+
+//        System.out.println("Field Position: " + fieldPos);
+//        graphics.strokeOval(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) - radius, radius * 2, radius * 2);
+
+        for (int v = 0; v < pathBounds.size(); v++) {
+            Polygon vectorBox = pathBounds.get(v);
+
+            if (vectorBox.intersects(new Circle(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) - radius, radius).getBoundsInLocal())) {
+
+                interceptComponentIndexes.add(v);
+            }
+        }
+
+        return (interceptComponentIndexes.stream().mapToInt(a -> a).toArray());
+    }
+
+    private ArrayList<Polygon> generatePathBounds() {
+
+        int vectorBoundExtension = 5;
+        ArrayList<Polygon> boundingBoxes = new ArrayList<Polygon>();
+        Vector2D currentPoint = new Vector2D(initialPos);
+
+        for (int v = 0; v < orderedPathVectors.size(); v++) {
+
+            Vector2D currentPathComponent = new Vector2D(orderedPathVectors.get(v));
+            Polygon vectorBox = generateVectorBounds(currentPoint, currentPathComponent, vectorBoundExtension);
+            boundingBoxes.add(vectorBox);
+        }
+
+        return boundingBoxes;
+    }
+
+    private Polygon generateVectorBounds(Vector2D initPos, Vector2D pathComponent, double boundSize) {
+
+        initPos = Vector2D.scaleComp(initPos, pixelsPerInch);
+        pathComponent = Vector2D.scaleComp(pathComponent, pixelsPerInch);
+        initPos.flipDimension(1);
+        pathComponent.flipDimension(1);
+
+        double xOffset = fieldDisplay.getWidth() / 2.0;
+        double yOffset = fieldDisplay.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        initPos.add(centerOffset);
+
+        ArrayList<Double> boundingBoxPoints = new ArrayList<>();
+        double angle = pathComponent.getTheta() - (Math.PI / 2.0);
+
+        Vector2D refVector = new Vector2D(angle, boundSize, true); // this vector is equal to half the width of the vector and quite useful
+
+        // create the "bottom" two points, the ones perpendicular to the start of the vector
+        Vector2D point = Vector2D.add(initPos, refVector);
+        boundingBoxPoints.add(point.getComponent(0));
+        boundingBoxPoints.add(point.getComponent(1));
+        point.sub(Vector2D.scale(refVector, 2.0));
+        boundingBoxPoints.add(point.getComponent(0));
+        boundingBoxPoints.add(point.getComponent(1));
+
+        initPos.add(pathComponent);
+
+        // create the "top" two points, the ones perpendicular to the end of the vector
+        point = Vector2D.sub(initPos, refVector);
+        boundingBoxPoints.add(point.getComponent(0));
+        boundingBoxPoints.add(point.getComponent(1));
+        point.add(Vector2D.scale(refVector, 2.0));
+        boundingBoxPoints.add(point.getComponent(0));
+        boundingBoxPoints.add(point.getComponent(1));
+
+        // for some stupid reason the JavaFX polygon class requires the points as an even list of doubles with the x and the y coordinate alternating ex. (x0, y0, x1, y1,...)
+        double[] pointsFormatted = boundingBoxPoints.stream().mapToDouble(a -> a).toArray();
+
+        return (new Polygon(pointsFormatted));
+    }
+
+    private void drawPathBounds() {
+
+        for (int p = 0; p < pathBounds.size(); p++) {
+
+            drawPolygonField(pathBounds.get(p), new Vector2D(0, 0));
+        }
+    }
+
+    private void drawPolygonField(Polygon p, Vector2D center) {
+
+        ObservableList<Double> points = p.getPoints();
+        double[] xPoints = new double[points.size() / 2];
+        double[] yPoints = new double[points.size() / 2];
+
+        for (int q = 0; q < points.size(); q++) {
+
+            if ((q % 2) == 0) {
+
+                xPoints[q / 2] = points.get(q) + center.getComponent(0);
+            } else {
+
+                yPoints[q / 2] = (points.get(q) + center.getComponent(1));
+            }
+        }
+
+//        System.out.println("Border X points: " + Arrays.toString(xPoints));
+//        System.out.println("Border Y points: " + Arrays.toString(yPoints));
+
+        Color prevStroke = (Color) fieldGraphics.getStroke();
+        fieldGraphics.setStroke(Color.BLACK);
+
+        fieldGraphics.strokePolygon(xPoints, yPoints, points.size() / 2);
+
+        fieldGraphics.setStroke(prevStroke);
     }
 
     public void fieldClicked(MouseEvent mouseEvent) {
@@ -457,7 +606,7 @@ public class WindowController {
         Vector2D centerOffset = new Vector2D(xOffset, yOffset);
         mouseClick.sub(centerOffset);
         mouseClick.flipDimension(1);
-        System.out.println("Mouse pressed at: " + mouseClick);
+        //System.out.println("Mouse pressed at: " + mouseClick);
 
         switch (pathMode) {
             case "Design":
@@ -472,23 +621,34 @@ public class WindowController {
                     mouseClick.setComponent(1, prevPos.getComponent(1) * pixelsPerInch);
                 }
 
+                //draw the robot to "simulate" the movement
+                drawRobotInch(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch));
+
+                // draw and store vector properties
+                orderedPathVectors.add(Vector2D.sub(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch), prevPos));
+                pathBounds.add(generateVectorBounds(prevPos, orderedPathVectors.get(orderedPathVectors.size() - 1), 5));
+                pathColors.add(currentPathColor);
+                drawVector(fieldDisplay, Vector2D.scaleComp(prevPos, pixelsPerInch), mouseClick, currentPathColor);
+
                 if (drawPoint) {
 
                     // draw and store point properties
                     pointColors.add(currentPointColor);
-                    drawPoint(fieldDisplay, mouseClick, currentPointColor,15);
+                    drawPoint(fieldDisplay, mouseClick, currentPointColor,6);
                 }
 
-                // draw and store vector properties
-                orderedPathVectors.add(Vector2D.sub(Vector2D.scaleComp(mouseClick, 1.0 / pixelsPerInch), prevPos));
-                pathColors.add(currentPathColor);
-                drawVector(fieldDisplay, Vector2D.scaleComp(prevPos, pixelsPerInch), mouseClick, currentPathColor);
-
-                System.out.println("Path Length: " + orderedPathVectors.size());
+                //System.out.println("Path Length: " + orderedPathVectors.size());
                 break;
             case "Edit Components":
 
+                int[] pathComponents = getPathCompInRadiusInch(mouseClick, 10);
+                //drawPathBounds();
+                System.out.println("Path Components Clicked: " + Arrays.toString(pathComponents));
 
+                if (pathComponents.length != 0) {
+
+                    editSelectCompLabel.setText("Selected Component: " + pathComponents[pathComponents.length - 1]);
+                }
                 break;
             case "Rigid Transform":
 
@@ -498,12 +658,33 @@ public class WindowController {
 
     private void resetField() {
 
-        graphics.drawImage(field, 0, 0);
+        fieldGraphics.drawImage(field, 0, 0);
     }
 
-    private void drawRobot() {
+    private void resetRobotDisplay() {
+
+        robotGraphics.clearRect(0, 0, robotDisplay.getWidth(), robotDisplay.getHeight());
+    }
+
+    private void drawRobotInch(Vector2D fieldPos) { // TODO: maybe make the robot rotate to the orientation of the vector when you create it?
+
+        resetRobotDisplay();
+
+        double robotImgWidth = robot.getWidth();
+        double robotImgHeight = robot.getHeight();
+
+        fieldPos = new Vector2D(fieldPos);
+        fieldPos.flipDimension(1);
+        fieldPos = Vector2D.scaleComp(fieldPos, pixelsPerInch);
+        fieldPos.sub(new Vector2D(robotImgWidth / 2.0, robotImgHeight / 2.0));
+
+        double xOffset = fieldDisplay.getWidth() / 2.0;
+        double yOffset = fieldDisplay.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        fieldPos.add(centerOffset);
 
         //TODO: have this method draw the robot (with the corrective factor to have it's center at the point) and make it so that whenever a point is placed the robot appears at that point (maybe?)
+        robotGraphics.drawImage(robot, fieldPos.getComponent(0), fieldPos.getComponent(1));
     }
 
     private void redrawPath() {
@@ -520,7 +701,7 @@ public class WindowController {
 
         Vector2D currentPos = new Vector2D(initialPos);
 
-        drawPointInch(fieldDisplay, initialPos, pointColors.get(0), 15);
+        drawPointInch(fieldDisplay, initialPos, pointColors.get(0), 6);
 
 //        if (pathColors.length >= orderedPathVectors.size()) {
 //
@@ -625,7 +806,7 @@ public class WindowController {
                 pointColor = pointColors[p];
             }
 
-            drawPointInch(fieldDisplay, initPoint, pointColor, 15);
+            drawPointInch(fieldDisplay, initPoint, pointColor, 6);
 
             if (p < orderedPathVectors.size()) {
 
@@ -639,7 +820,7 @@ public class WindowController {
         drawPoint(c, Vector2D.scaleComp(point, pixelsPerInch), pointColor, pointDiameter);
     }
 
-    private void drawPoint(Canvas c, Vector2D point, Color pointColor, int pointDiameter) {
+    private void drawPoint(Canvas c, Vector2D point, Color pointColor, int pointDiameter) { //TODO: clean up code such that these take in only real canvas coordinates and not field coordinates scaled to be pixels, use the new convert methods
 
         point = new Vector2D(point);
         point.flipDimension(1);
@@ -654,12 +835,16 @@ public class WindowController {
 
         GraphicsContext g = c.getGraphicsContext2D();
 
-        Color prevFill = (Color) graphics.getFill();
-        g.setFill(pointColor);
+        Color prevStroke = (Color) g.getStroke();
+        double prevStrokeWidth = g.getLineWidth();
 
-        g.fillOval(point.getComponent(0), point.getComponent(1), pointDiameter, pointDiameter);
+        g.setStroke(pointColor);
+        g.setLineWidth(3);
 
-        g.setFill(prevFill);
+        g.strokeOval(point.getComponent(0), point.getComponent(1), pointDiameter, pointDiameter);
+
+        g.setStroke(prevStroke);
+        g.setLineWidth(prevStrokeWidth);
     }
 
     private void drawImageInch(Canvas c, Vector2D cornerPos, Image image) {

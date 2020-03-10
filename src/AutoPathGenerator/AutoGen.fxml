@@ -83,7 +83,7 @@
                               <Insets top="15.0" />
                            </GridPane.margin>
                         </Label>
-                        <CheckBox fx:id="drawPointCheckBox" mnemonicParsing="false" selected="true" text="Draw Points" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
+                        <CheckBox fx:id="drawPointCheckBox" mnemonicParsing="false" text="Draw Points" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
                            <font>
                               <Font size="14.0" />
                            </font>
@@ -112,7 +112,7 @@
                               <Font size="18.0" />
                            </font>
                         </Label>
-                        <Label fx:id="editSelectCompLabel" text="Selected Component:" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
+                        <Label fx:id="editSelectCompLabel" text="Selected Component: NONE" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
                            <GridPane.margin>
                               <Insets top="20.0" />
                            </GridPane.margin>
@@ -120,9 +120,42 @@
                               <Font size="14.0" />
                            </font>
                         </Label>
+                         <Label fx:id="generalTextLabel" text="General" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="4" GridPane.valignment="TOP">
+                             <GridPane.margin>
+                                 <Insets />
+                             </GridPane.margin>
+                             <font>
+                                 <Font size="24.0" />
+                             </font>
+                         </Label>
+                        <Button fx:id="undoButton" alignment="CENTER" mnemonicParsing="false" text="Undo" GridPane.halignment="RIGHT" GridPane.rowIndex="4" GridPane.valignment="CENTER">
+                           <GridPane.margin>
+                              <Insets right="15.0" />
+                           </GridPane.margin>
+                           <padding>
+                              <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                           </padding>
+                        </Button>
+                        <Button fx:id="redoButton" alignment="CENTER" mnemonicParsing="false" text="Redo" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                           <GridPane.margin>
+                              <Insets left="15.0" />
+                           </GridPane.margin>
+                           <padding>
+                              <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                           </padding>
+                        </Button>
+                        <Button fx:id="clearButton" alignment="CENTER" mnemonicParsing="false" text="Clear Path" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="4" GridPane.valignment="CENTER">
+                           <GridPane.margin>
+                              <Insets top="105.0" />
+                           </GridPane.margin>
+                           <padding>
+                              <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                           </padding>
+                        </Button>
                      </children>
                   </GridPane>
                   <Canvas fx:id="fieldDisplay" height="700.0" onMouseClicked="#fieldClicked" width="700.0" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />
+                  <Canvas fx:id="robotDisplay" height="700.0" onMouseClicked="#fieldClicked" width="700.0" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />
                </children>
             </GridPane>
       </content>

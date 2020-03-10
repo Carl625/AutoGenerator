@@ -206,6 +206,13 @@ public class Vector2D {
         components[1] *= scalar;
     }
 
+    public void scaleMag(double newScalar) {
+
+        R *= newScalar;
+
+        genComp();
+    }
+
     public void scale(int component, double scalar) {
 
         if (component >= 0 && component < components.length) {
