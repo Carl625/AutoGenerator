@@ -86,7 +86,9 @@ public class WindowController {
     public TextField initXField;
 
     /*---------- Internal Variables ----------*/
-    private double pixelsPerInch = (670.0 / (24.0 * 6.0)); // 700x700 pixel image of a 12ft x 12ft field, 670 of the pixels actually represent the length of the field
+    private double fieldLengthInch = 24.0 * 6.0;
+    private double pixelsPerInch = (670.0 / fieldLengthInch); // 700x700 pixel image of a 12ft x 12ft field, 670 of the pixels actually represent the length of the field
+    private Polygon fieldBounds = new Polygon(fieldLengthInch / -2.0, fieldLengthInch / -2.0, fieldLengthInch / -2.0, fieldLengthInch / 2.0, fieldLengthInch / 2.0, fieldLengthInch / 2.0, fieldLengthInch / 2.0, fieldLengthInch / -2.0);
 
     private ArrayList<Vector2D> orderedPathVectors;
     private ArrayList<Polygon> pathBounds;
@@ -340,16 +342,14 @@ public class WindowController {
                 if (initialPos.equals(new Vector2D(-63, -36))) {
 
                     initialPos = new Vector2D(63, -36);
-                    initXField.setText(initialPos.getComponent(0).toString());
-                    initYField.setText(initialPos.getComponent(1).toString());
+                    updateInitPosFields();
                 }
             } else if (newlySelected.equals("Blue")) {
 
                 if (initialPos.equals(new Vector2D(63, -36))) {
 
                     initialPos = new Vector2D(-63, -36);
-                    initXField.setText(initialPos.getComponent(0).toString());
-                    initYField.setText(initialPos.getComponent(1).toString());
+                    updateInitPosFields();
                 }
             }
         }
@@ -428,6 +428,12 @@ public class WindowController {
             resetField();
             redrawPath(pathColors.toArray(new Color[0]));
         }
+    }
+
+    private void updateInitPosFields() {
+
+        initXField.setText(initialPos.getComponent(0).toString());
+        initYField.setText(initialPos.getComponent(1).toString());
     }
 
     private void clearPath() {
@@ -546,6 +552,7 @@ public class WindowController {
             Vector2D currentPathComponent = new Vector2D(orderedPathVectors.get(v));
             Polygon vectorBox = generateVectorBounds(currentPoint, currentPathComponent, vectorBoundExtension);
             boundingBoxes.add(vectorBox);
+            currentPoint.add(currentPathComponent);
         }
 
         return boundingBoxes;
@@ -642,10 +649,10 @@ public class WindowController {
 
                 if (pathComponentSnap.equals("Vertical")) {
 
-                    mouseClick.setComponent(0, prevPos.getComponent(0) * pixelsPerInch);
+                    mouseClick.setComponent(0, prevPos.getComponent(0));
                 } else if (pathComponentSnap.equals("Horizontal")) {
 
-                    mouseClick.setComponent(1, prevPos.getComponent(1) * pixelsPerInch);
+                    mouseClick.setComponent(1, prevPos.getComponent(1));
                 }
 
                 //draw the robot to "simulate" the movement
@@ -665,6 +672,7 @@ public class WindowController {
 
                 pointColors.add(currentPointColor);
                 //System.out.println("Path Length: " + orderedPathVectors.size());
+                prevMouseClick = null;
                 break;
             case "Edit Components":
 
@@ -677,23 +685,47 @@ public class WindowController {
                     editSelectCompLabel.setText("Selected Component: " + pathComponents[pathComponents.length - 1]);
                 }
 
+                prevMouseClick = null;
                 break;
             case "Rigid Transform":
-
                 pathComponents = getPathCompInRadiusInch(mouseClick, 10);
 
-                if (pathComponents.length > 0) {
+                if (prevMouseClick == null) {
 
+                    if (pathComponents.length > 0) {
 
+                        prevMouseClick = mouseClick;
+                    }
+                    //System.out.println(true);
                 } else {
+                    Vector2D offset = Vector2D.sub(mouseClick, prevMouseClick);
 
+                    System.out.println("Do points survive: " + isPathInField(offset));
+                    if (isPathInField(offset)) {
 
+                        initialPos.add(offset);
+                        pathBounds = generatePathBounds();
+                        updateInitPosFields();
+                        //System.out.println("Rigid Transform: " + Vector2D.scaleComp(Vector2D.sub(mouseClick, prevMouseClick), 1.0 / pixelsPerInch));
+
+                        resetField();
+                        resetRobotDisplay();
+                        redrawPath();
+                        //drawPathBounds();
+
+                        if (drawPoint) {
+
+                            redrawPoints();
+                        }
+
+                        drawRobotInch(getCurrentPathPos());
+                    }
+
+                    prevMouseClick = null;
                 }
 
                 break;
         }
-
-        prevMouseClick = mouseClick;
     }
 
     private void resetField() {
@@ -704,6 +736,34 @@ public class WindowController {
     private void resetRobotDisplay() {
 
         robotGraphics.clearRect(0, 0, robotDisplay.getWidth(), robotDisplay.getHeight());
+    }
+
+    public boolean isPathInField() {
+
+        return isPathInField(new Vector2D(0, 0));
+    }
+
+    public boolean isPathInField(Vector2D hypotheticalOffset) {
+
+        Vector2D currentPoint = Vector2D.add(initialPos, hypotheticalOffset);
+
+        if (fieldBounds.contains(currentPoint.toPoint())) {
+
+            boolean inField = true;
+
+            for (int v = 0; v < orderedPathVectors.size() && inField; v++) {
+
+                currentPoint.add(orderedPathVectors.get(v));
+                inField = fieldBounds.contains(currentPoint.toPoint());
+            }
+
+            System.out.println(inField);
+
+            return inField;
+        } else {
+
+            return false;
+        }
     }
 
     private void drawRobotInch(Vector2D fieldPos) { // TODO: maybe make the robot rotate to the orientation of the vector when you create it?
@@ -771,41 +831,43 @@ public class WindowController {
         initPoint = new Vector2D(initPoint);
         termPoint = new Vector2D(termPoint);
 
-        if (c.contains(initPoint.toPoint()) && c.contains(termPoint.toPoint())) {
+//        if (c.contains(initPoint.toPoint()) && c.contains(termPoint.toPoint())) { // reinstate this if drawing algorithm has problems, but the graphics algorithm doesn't seem to have problems
+//
+//
+//        }
 
-            GraphicsContext g = c.getGraphicsContext2D();
-            Color prevStroke = (Color) g.getStroke();
-            Color prevFill = (Color) g.getFill();
-            g.setStroke(arrowColor);
-            g.setFill(arrowColor);
+        GraphicsContext g = c.getGraphicsContext2D();
+        Color prevStroke = (Color) g.getStroke();
+        Color prevFill = (Color) g.getFill();
+        g.setStroke(arrowColor);
+        g.setFill(arrowColor);
 
-            Vector2D pathVector = Vector2D.sub(termPoint, initPoint);
-            double angle = pathVector.getTheta();
-            double triangleSideMagnitude = 13;
+        Vector2D pathVector = Vector2D.sub(termPoint, initPoint);
+        double angle = pathVector.getTheta();
+        double triangleSideMagnitude = 13;
 
-            double[] xPoints = new double[3];
-            double[] yPoints = new double[3];
+        double[] xPoints = new double[3];
+        double[] yPoints = new double[3];
 
-            //tip
-            xPoints[1] = termPoint.getComponent(0);
-            yPoints[1] = termPoint.getComponent(1);
+        //tip
+        xPoints[1] = termPoint.getComponent(0);
+        yPoints[1] = termPoint.getComponent(1);
 
-            // second corner of the triangle
-            Vector2D tip1 = Vector2D.add(termPoint, new Vector2D(normalizeAngle(135 + Math.toDegrees(angle)), triangleSideMagnitude, false));
-            xPoints[0] = tip1.getComponent(0);
-            yPoints[0] = tip1.getComponent(1);
+        // second corner of the triangle
+        Vector2D tip1 = Vector2D.add(termPoint, new Vector2D(normalizeAngle(135 + Math.toDegrees(angle)), triangleSideMagnitude, false));
+        xPoints[0] = tip1.getComponent(0);
+        yPoints[0] = tip1.getComponent(1);
 
-            //third corner of the triangle
-            Vector2D tip2 = Vector2D.add(termPoint, new Vector2D(normalizeAngle(Math.toDegrees(angle) - 135), triangleSideMagnitude, false));
-            xPoints[2] = tip2.getComponent(0);
-            yPoints[2] = tip2.getComponent(1);
+        //third corner of the triangle
+        Vector2D tip2 = Vector2D.add(termPoint, new Vector2D(normalizeAngle(Math.toDegrees(angle) - 135), triangleSideMagnitude, false));
+        xPoints[2] = tip2.getComponent(0);
+        yPoints[2] = tip2.getComponent(1);
 
-            g.strokeLine(initPoint.getComponent(0), initPoint.getComponent(1), xPoints[1], yPoints[1]);
-            g.fillPolygon(xPoints, yPoints, 3);
+        g.strokeLine(initPoint.getComponent(0), initPoint.getComponent(1), xPoints[1], yPoints[1]);
+        g.fillPolygon(xPoints, yPoints, 3);
 
-            g.setStroke(prevStroke);
-            g.setFill(prevFill);
-        }
+        g.setStroke(prevStroke);
+        g.setFill(prevFill);
     }
 
     private void redrawPoints() {
