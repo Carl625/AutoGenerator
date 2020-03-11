@@ -61,6 +61,11 @@ public class WindowController {
 
     // editing
     public Label editSelectCompLabel;
+    public Label editSelectPointLabel;
+
+    public Label pathTypeSetText;
+    public ChoiceBox pathTypeDropdown;
+    private String pathType;
 
     //general
     public Label generalTextLabel;
@@ -196,6 +201,11 @@ public class WindowController {
         drawRobot = drawPointCheckBox.isSelected();
 
         //path editing
+        pathTypeDropdown.getItems().clear();
+        pathTypeDropdown.getItems().add("Go To Position");
+        pathTypeDropdown.getItems().add("Pure Pursuit");
+        pathTypeDropdown.getSelectionModel().select(0);
+        pathTypeDropdown.setOnAction(event -> pathTypeChanged());
 
         //point editing
 
@@ -287,10 +297,13 @@ public class WindowController {
                     break;
                 case "Edit Components":
 
+                    editSelectCompLabel.setText("Selected Component: NONE");
                     setPathEditVisible(true);
                     break;
                 case "Rigid Transform":
 
+                    prevMouseClick = null;
+                    editSelectCompLabel.setText("Path Selected: FALSE");
                     setPathRTVisible(true);
                     break;
             }
@@ -348,6 +361,10 @@ public class WindowController {
 
             drawRobotInch(getCurrentPathPos());
         }
+
+        rotatePath(new Vector2D(0, 0), Math.toRadians(90));
+        resetField();
+        redrawPath();
     }
 
     private void pathComponentSnapChanged() {
@@ -357,6 +374,16 @@ public class WindowController {
         if (selectIndex != -1) {
 
             pathComponentSnap = pathComponentSnapDropdown.getItems().get(selectIndex);
+        }
+    }
+
+    private void pathTypeChanged() {
+
+        int newlySelected = pathTypeDropdown.getSelectionModel().getSelectedIndex();
+
+        if (newlySelected != -1) {
+
+            pathType = (String) pathTypeDropdown.getItems().get(pathTypeDropdown.getSelectionModel().getSelectedIndex());
         }
     }
 
@@ -470,6 +497,16 @@ public class WindowController {
 
             resetField();
             redrawPath(pathColors.toArray(new Color[0]));
+
+            if (drawPoint) {
+
+                redrawPoints(pointColors.toArray(new Color[0]));
+            }
+
+            if (snapToGrid) {
+
+                drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+            }
         }
     }
 
@@ -542,44 +579,21 @@ public class WindowController {
         return canvasPos;
     }
 
-    public Vector2D snapToGridField(Vector2D v) {
-
-        return  snapToGridField(new Vector2D(0, 0), v);
-    }
-
-    public Vector2D snapToGridField(Vector2D initPos, Vector2D termPos) {
+    public Vector2D snapToGridField(Vector2D termPos) {
 
         double pixelsPerCol = (670.0 / 12.0);
         double pixelsPerRow = (670.0 / 12.0);
 
-        initPos = convertFieldToCanvas(initPos);
         termPos = convertFieldToCanvas(termPos);
-
-        initPos.sub(new Vector2D(15, 15));
         termPos.sub(new Vector2D(15, 15));
 
-        initPos.scale(0, 1.0 / pixelsPerCol);
-        termPos.scale(0, 1.0 / pixelsPerCol);
-        initPos.scale(1, 1.0 / pixelsPerRow);
-        termPos.scale(1, 1.0 / pixelsPerRow);
+        termPos.setComponent(0, Math.round(termPos.getComponent(0) / pixelsPerCol) * pixelsPerCol);
+        termPos.setComponent(1, Math.round(termPos.getComponent(1) / pixelsPerRow) * pixelsPerRow);
 
-        initPos.setComponent(0, Math.round(initPos.getComponent(0)));
-        termPos.setComponent(0, Math.round(termPos.getComponent(0)));
-        initPos.setComponent(1, Math.round(initPos.getComponent(1)));
-        termPos.setComponent(1, Math.round(termPos.getComponent(1)));
-
-        initPos.scale(0, pixelsPerCol);
-        termPos.scale(0, pixelsPerCol);
-        initPos.scale(1, pixelsPerRow);
-        termPos.scale(1, pixelsPerRow);
-
-        initPos.add(new Vector2D(15, 15));
         termPos.add(new Vector2D(15, 15));
-
-        initPos = convertCanvasToField(initPos);
         termPos = convertCanvasToField(termPos);
 
-        return Vector2D.sub(termPos, initPos);
+        return termPos;
     }
 
     public double normalizeAngle(double degrees) {
@@ -683,6 +697,55 @@ public class WindowController {
         double[] pointsFormatted = boundingBoxPoints.stream().mapToDouble(a -> a).toArray();
 
         return (new Polygon(pointsFormatted));
+    }
+
+    private void rotatePath(Vector2D pivot, double angle) {
+
+        ArrayList<Vector2D> newPathPoints = generatePathPoints();
+        System.out.println(newPathPoints.size());
+
+        Vector2D currentPoint = new Vector2D(newPathPoints.get(0));
+        currentPoint.sub(pivot);
+        currentPoint.rotate(angle);
+        currentPoint.add(pivot);
+        newPathPoints.add(new Vector2D(currentPoint));
+
+        for (int v = 1; v < newPathPoints.size(); v++) {
+
+            currentPoint.add(newPathPoints.get(v));
+            currentPoint.sub(pivot);
+            currentPoint.rotate(angle);
+            currentPoint.add(pivot);
+
+            newPathPoints.add(new Vector2D(currentPoint));
+        }
+
+        initialPos = new Vector2D(newPathPoints.get(0));
+        updateInitPosFields();
+
+        for (int p = 1; p < newPathPoints.size(); p++) {
+
+            newPathPoints.set(p - 1, Vector2D.sub(newPathPoints.get(p), newPathPoints.get(p - 1)));
+        }
+
+        newPathPoints.remove(newPathPoints.size() - 1);
+
+        orderedPathVectors = newPathPoints;
+    }
+
+    private ArrayList<Vector2D> generatePathPoints() {
+
+        ArrayList<Vector2D> pathPoints = new ArrayList<>();
+        Vector2D currentPoint = new Vector2D(initialPos);
+        pathPoints.add(currentPoint);
+
+        for (int p = 0; p < orderedPathVectors.size(); p++) {
+
+            pathPoints.add(orderedPathVectors.get(p));
+            pathPoints.add(new Vector2D(currentPoint));
+        }
+
+        return pathPoints;
     }
 
     private void drawPathBounds() {
@@ -814,6 +877,7 @@ public class WindowController {
                     if (pathComponents.length > 0) {
 
                         prevMouseClick = mouseClick;
+                        editSelectCompLabel.setText("Path Selected: TRUE");
                     }
                 } else {
                     Vector2D offset = Vector2D.sub(mouseClick, prevMouseClick);
@@ -841,6 +905,7 @@ public class WindowController {
                     }
 
                     prevMouseClick = null;
+                    editSelectCompLabel.setText("Path Selected: FALSE");
                 }
 
                 break;
@@ -860,6 +925,33 @@ public class WindowController {
     public boolean isPathInField() {
 
         return isPathInField(new Vector2D(0, 0));
+    }
+
+    public boolean isPathInField(Vector2D pivot, double angle) {
+
+        Vector2D currentPoint = Vector2D.sub(initialPos, pivot);
+        currentPoint.rotate(angle);
+        currentPoint.add(pivot);
+
+        if (fieldBounds.contains(currentPoint.toPoint())) {
+
+            boolean inField = true;
+
+            for (int v = 0; v < orderedPathVectors.size() && inField; v++) {
+
+                currentPoint.add(orderedPathVectors.get(v));
+                currentPoint.sub(pivot);
+                currentPoint.rotate(angle);
+                currentPoint.add(pivot);
+
+                inField = fieldBounds.contains(currentPoint.toPoint());
+            }
+
+            return inField;
+        } else {
+
+            return false;
+        }
     }
 
     public boolean isPathInField(Vector2D hypotheticalOffset) {
@@ -1081,13 +1173,18 @@ public class WindowController {
         //path
         setVisible(show, pathText);
         setVisible(show, editSelectCompLabel);
+        setVisible(show, pathTypeSetText);
+        setVisible(show, pathTypeDropdown);
 
         //point
         setVisible(show, pointText);
+        setVisible(show, editSelectPointLabel);
     }
 
     private void setPathRTVisible(boolean show) { // displays or hides the Nodes associated with transforming the path rigidly (Rotation, Translation, Reflection)
 
+        setVisible(show, pathText);
+        setVisible(show, editSelectCompLabel);
     }
 
     /*---------- Testers ----------*/
