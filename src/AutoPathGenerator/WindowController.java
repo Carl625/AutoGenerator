@@ -321,7 +321,7 @@ public class WindowController {
             drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
         }
 
-        redrawPath();
+        redrawPath(pathColors.toArray(new Color[0]));
 
         if (drawPoint) {
 
@@ -338,7 +338,7 @@ public class WindowController {
 
         drawPoint = drawPointCheckBox.isSelected();
         resetField();
-        redrawPath();
+        redrawPath(pathColors.toArray(new Color[0]));
 
         if (drawPoint) {
 
@@ -361,10 +361,6 @@ public class WindowController {
 
             drawRobotInch(getCurrentPathPos());
         }
-
-        rotatePath(new Vector2D(0, 0), Math.toRadians(90));
-        resetField();
-        redrawPath();
     }
 
     private void pathComponentSnapChanged() {
@@ -526,7 +522,7 @@ public class WindowController {
 
         resetField();
         resetRobotDisplay();
-        redrawPath();
+        redrawPath(pathColors.toArray(new Color[0]));
 
         if (snapToGrid) {
 
@@ -702,23 +698,16 @@ public class WindowController {
     private void rotatePath(Vector2D pivot, double angle) {
 
         ArrayList<Vector2D> newPathPoints = generatePathPoints();
-        System.out.println(newPathPoints.size());
 
-        Vector2D currentPoint = new Vector2D(newPathPoints.get(0));
-        currentPoint.sub(pivot);
-        currentPoint.rotate(angle);
-        currentPoint.add(pivot);
-        newPathPoints.add(new Vector2D(currentPoint));
+        for (int v = 0; v < newPathPoints.size(); v++) {
 
-        for (int v = 1; v < newPathPoints.size(); v++) {
-
-            currentPoint.add(newPathPoints.get(v));
+            Vector2D currentPoint = newPathPoints.get(v);
             currentPoint.sub(pivot);
             currentPoint.rotate(angle);
             currentPoint.add(pivot);
-
-            newPathPoints.add(new Vector2D(currentPoint));
         }
+
+        //System.out.println(newPathPoints);
 
         initialPos = new Vector2D(newPathPoints.get(0));
         updateInitPosFields();
@@ -737,11 +726,11 @@ public class WindowController {
 
         ArrayList<Vector2D> pathPoints = new ArrayList<>();
         Vector2D currentPoint = new Vector2D(initialPos);
-        pathPoints.add(currentPoint);
+        pathPoints.add(new Vector2D(currentPoint));
 
         for (int p = 0; p < orderedPathVectors.size(); p++) {
 
-            pathPoints.add(orderedPathVectors.get(p));
+            currentPoint.add(orderedPathVectors.get(p));
             pathPoints.add(new Vector2D(currentPoint));
         }
 
@@ -890,7 +879,7 @@ public class WindowController {
 
                         resetField();
                         resetRobotDisplay();
-                        redrawPath();
+                        redrawPath(pathColors.toArray(new Color[0]));
                         //drawPathBounds();
 
                         if (drawPoint) {

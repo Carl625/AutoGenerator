@@ -140,6 +140,8 @@ public class Vector2D {
 
             components[component] = value;
         }
+
+        genAngles();
     }
 
     public void add(Vector2D term_two) {
@@ -148,6 +150,8 @@ public class Vector2D {
 
         components[0] += two_comp[0];
         components[1] += two_comp[1];
+
+        genAngles();
     }
 
     public void sub(Vector2D term_two) {
@@ -204,6 +208,8 @@ public class Vector2D {
 
         components[0] *= scalar;
         components[1] *= scalar;
+
+        genAngles();
     }
 
     public void scaleMag(double newScalar) {
