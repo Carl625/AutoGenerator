@@ -152,6 +152,18 @@
                               <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
                            </padding>
                         </Button>
+                        <CheckBox fx:id="snapToGridCheckBox" mnemonicParsing="false" text="Snap To Grid" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
+                           <GridPane.margin>
+                              <Insets top="20.0" />
+                           </GridPane.margin>
+                           <font>
+                              <Font size="14.0" />
+                           </font>
+                        </CheckBox>
+                        <CheckBox fx:id="drawRobotCheckBox" mnemonicParsing="false" text="Draw Robot" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="3" GridPane.valignment="CENTER">
+                           <font>
+                              <Font size="14.0" />
+                           </font></CheckBox>
                      </children>
                   </GridPane>
                   <Canvas fx:id="fieldDisplay" height="700.0" onMouseClicked="#fieldClicked" width="700.0" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />

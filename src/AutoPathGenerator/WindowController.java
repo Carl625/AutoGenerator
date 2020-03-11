@@ -24,7 +24,7 @@ public class WindowController {
 
     //display variables
     public Canvas fieldDisplay; // TODO: make a class that encapsulates all drawing functions, more OOP
-    public Canvas robotDisplay;
+    public Canvas robotDisplay; // this does a fun and actually has a transparent canvas on top of another so I won't have to spend time redrawing the screen for the robot
     private GraphicsContext fieldGraphics;
     private GraphicsContext robotGraphics;
     private Image field;
@@ -33,12 +33,14 @@ public class WindowController {
     //Editing and definition variables
     public ChoiceBox<String> pathModeDropdown;
     private String pathMode;
-    private String prevPathMode; // TODO: init this properly
 
     public Label pathText;
     public Label pointText;
 
     // design
+    public CheckBox snapToGridCheckBox;
+    private boolean snapToGrid;
+
     public Label pathColorSetText;
     public ColorPicker currentPathColorPicker;
     private Color currentPathColor;
@@ -53,6 +55,9 @@ public class WindowController {
     public Label pointColorSetText;
     public ColorPicker pointColorPicker;
     private Color currentPointColor;
+
+    public CheckBox drawRobotCheckBox;
+    public boolean drawRobot;
 
     // editing
     public Label editSelectCompLabel;
@@ -160,6 +165,10 @@ public class WindowController {
         pathMode = pathModeDropdown.getItems().get(0);
 
         //path design
+        snapToGridCheckBox.setSelected(false);
+        snapToGridCheckBox.setOnAction(event -> snapToGridChanged());
+        snapToGrid = snapToGridCheckBox.isSelected();
+
         currentPathColorPicker.setValue(Color.LAWNGREEN);
         currentPathColorPicker.setOnAction(event -> pathColorChanged());
 
@@ -173,8 +182,8 @@ public class WindowController {
         pathComponentSnapDropdown.setOnAction(event -> pathComponentSnapChanged());
 
         //point design
+        drawPointCheckBox.setSelected(false);
         drawPointCheckBox.setOnAction(event -> drawPointChanged());
-
         drawPoint = drawPointCheckBox.isSelected();
 
         pointColorPicker.setValue(Color.RED);
@@ -182,6 +191,9 @@ public class WindowController {
 
         currentPointColor = pointColorPicker.getValue();
 
+        drawRobotCheckBox.setSelected(false);
+        drawRobotCheckBox.setOnAction(event -> drawRobotChanged());
+        drawRobot = drawPointCheckBox.isSelected();
 
         //path editing
 
@@ -285,6 +297,25 @@ public class WindowController {
         }
     }
 
+    private void snapToGridChanged() {
+
+        snapToGrid = snapToGridCheckBox.isSelected();
+        resetField();
+
+        if (snapToGrid) {
+
+
+            drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+        }
+
+        redrawPath();
+
+        if (drawPoint) {
+
+            redrawPoints(pointColors.toArray(new Color[0]));
+        }
+    }
+
     private void pathColorChanged() {
 
         currentPathColor = currentPathColorPicker.getValue();
@@ -305,6 +336,18 @@ public class WindowController {
     private void pointColorChanged() {
 
         currentPointColor = pointColorPicker.getValue();
+    }
+
+    private void drawRobotChanged() {
+
+        drawRobot = drawRobotCheckBox.isSelected();
+
+        resetRobotDisplay();
+
+        if (drawRobot) {
+
+            drawRobotInch(getCurrentPathPos());
+        }
     }
 
     private void pathComponentSnapChanged() {
@@ -447,6 +490,11 @@ public class WindowController {
         resetField();
         resetRobotDisplay();
         redrawPath();
+
+        if (snapToGrid) {
+
+            drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+        }
     }
 
     private void undo() { // how should I make the undo stack generalized? make them strings for specific actions encoded in a method?
@@ -492,6 +540,46 @@ public class WindowController {
         canvasPos.scale(1 / pixelsPerInch);
 
         return canvasPos;
+    }
+
+    public Vector2D snapToGridField(Vector2D v) {
+
+        return  snapToGridField(new Vector2D(0, 0), v);
+    }
+
+    public Vector2D snapToGridField(Vector2D initPos, Vector2D termPos) {
+
+        double pixelsPerCol = (670.0 / 12.0);
+        double pixelsPerRow = (670.0 / 12.0);
+
+        initPos = convertFieldToCanvas(initPos);
+        termPos = convertFieldToCanvas(termPos);
+
+        initPos.sub(new Vector2D(15, 15));
+        termPos.sub(new Vector2D(15, 15));
+
+        initPos.scale(0, 1.0 / pixelsPerCol);
+        termPos.scale(0, 1.0 / pixelsPerCol);
+        initPos.scale(1, 1.0 / pixelsPerRow);
+        termPos.scale(1, 1.0 / pixelsPerRow);
+
+        initPos.setComponent(0, Math.round(initPos.getComponent(0)));
+        termPos.setComponent(0, Math.round(termPos.getComponent(0)));
+        initPos.setComponent(1, Math.round(initPos.getComponent(1)));
+        termPos.setComponent(1, Math.round(termPos.getComponent(1)));
+
+        initPos.scale(0, pixelsPerCol);
+        termPos.scale(0, pixelsPerCol);
+        initPos.scale(1, pixelsPerRow);
+        termPos.scale(1, pixelsPerRow);
+
+        initPos.add(new Vector2D(15, 15));
+        termPos.add(new Vector2D(15, 15));
+
+        initPos = convertCanvasToField(initPos);
+        termPos = convertCanvasToField(termPos);
+
+        return Vector2D.sub(termPos, initPos);
     }
 
     public double normalizeAngle(double degrees) {
@@ -560,15 +648,13 @@ public class WindowController {
 
     private Polygon generateVectorBounds(Vector2D initPos, Vector2D pathComponent, double boundSize) {
 
-        initPos = Vector2D.scaleComp(initPos, pixelsPerInch);
-        pathComponent = Vector2D.scaleComp(pathComponent, pixelsPerInch);
-        initPos.flipDimension(1);
-        pathComponent.flipDimension(1);
+        initPos = convertFieldToCanvas(initPos);
+        pathComponent = convertFieldToCanvas(pathComponent);
 
         double xOffset = fieldDisplay.getWidth() / 2.0;
         double yOffset = fieldDisplay.getHeight() / 2.0;
         Vector2D centerOffset = new Vector2D(xOffset, yOffset);
-        initPos.add(centerOffset);
+        pathComponent.sub(centerOffset);
 
         ArrayList<Double> boundingBoxPoints = new ArrayList<>();
         double angle = pathComponent.getTheta() - (Math.PI / 2.0);
@@ -635,6 +721,30 @@ public class WindowController {
         fieldGraphics.setStroke(prevStroke);
     }
 
+    public void drawGrid(Canvas c, int rows, int columns, Color gridColor, double[] padding) { // padding is {up, left, down, right}
+
+        double xInterval = (c.getWidth() - padding[1] - padding[3]) / columns;
+        double yInterval = (c.getHeight() - padding[0] - padding[2]) / rows;
+
+        GraphicsContext g = c.getGraphicsContext2D();
+        Color prevStroke = (Color) g.getStroke();
+        g.setStroke(gridColor);
+
+        for (int col = 0; col < (columns + 1); col++) {
+
+            int xPos = (int) (padding[1] + (xInterval * col));
+            g.strokeLine(xPos, padding[0], xPos, c.getHeight() - padding[2]);
+        }
+
+        for (int row = 0; row < (rows + 1); row++) {
+
+            int yPos = (int) (padding[0] + (xInterval * row));
+            g.strokeLine(padding[1], yPos, c.getWidth() - padding[3], yPos);
+        }
+
+        g.setStroke(prevStroke);
+    }
+
     public void fieldClicked(MouseEvent mouseEvent) {
         Vector2D mouseClick = new Vector2D(mouseEvent.getSceneX() - fieldDisplay.getLayoutX(), mouseEvent.getSceneY() - fieldDisplay.getLayoutY());
         Vector2D mouseCorrection = new Vector2D(0, -28);
@@ -655,14 +765,23 @@ public class WindowController {
                     mouseClick.setComponent(1, prevPos.getComponent(1));
                 }
 
+                if (snapToGrid) {
+
+                    mouseClick = snapToGridField(mouseClick);
+                }
+
                 //draw the robot to "simulate" the movement
-                drawRobotInch(mouseClick);
+                if (drawRobot) {
+
+                    drawRobotInch(mouseClick);
+                }
 
                 // draw and store vector properties
                 orderedPathVectors.add(Vector2D.sub(mouseClick, prevPos));
                 pathBounds.add(generateVectorBounds(prevPos, orderedPathVectors.get(orderedPathVectors.size() - 1), 5));
                 pathColors.add(currentPathColor);
                 drawVectorField(fieldDisplay, prevPos, mouseClick, currentPathColor);
+                //drawPathBounds();
 
                 if (drawPoint) {
 
@@ -696,17 +815,14 @@ public class WindowController {
 
                         prevMouseClick = mouseClick;
                     }
-                    //System.out.println(true);
                 } else {
                     Vector2D offset = Vector2D.sub(mouseClick, prevMouseClick);
 
-                    System.out.println("Do points survive: " + isPathInField(offset));
                     if (isPathInField(offset)) {
 
                         initialPos.add(offset);
                         pathBounds = generatePathBounds();
                         updateInitPosFields();
-                        //System.out.println("Rigid Transform: " + Vector2D.scaleComp(Vector2D.sub(mouseClick, prevMouseClick), 1.0 / pixelsPerInch));
 
                         resetField();
                         resetRobotDisplay();
@@ -718,7 +834,10 @@ public class WindowController {
                             redrawPoints();
                         }
 
-                        drawRobotInch(getCurrentPathPos());
+                        if (drawRobot) {
+
+                            drawRobotInch(getCurrentPathPos());
+                        }
                     }
 
                     prevMouseClick = null;
@@ -757,8 +876,6 @@ public class WindowController {
                 inField = fieldBounds.contains(currentPoint.toPoint());
             }
 
-            System.out.println(inField);
-
             return inField;
         } else {
 
@@ -772,7 +889,6 @@ public class WindowController {
         fieldPos = convertFieldToCanvas(fieldPos);
         fieldPos.sub(new Vector2D(robot.getWidth() / 2.0, robot.getHeight() / 2.0));
 
-        //TODO: have this method draw the robot (with the corrective factor to have it's center at the point) and make it so that whenever a point is placed the robot appears at that point (maybe?)
         robotGraphics.drawImage(robot, fieldPos.getComponent(0), fieldPos.getComponent(1));
     }
 
@@ -946,6 +1062,7 @@ public class WindowController {
 
     private void setPathDesignVisible(boolean show) { // displays or hides the Nodes associated with designing the path (Selecting points, editing position, Defining Curves)
         //path
+        setVisible(show, snapToGridCheckBox);
         setVisible(show, pathText);
         setVisible(show, pathColorSetText);
         setVisible(show, currentPathColorPicker);
@@ -957,6 +1074,7 @@ public class WindowController {
         setVisible(show, drawPointCheckBox);
         setVisible(show, pointColorSetText);
         setVisible(show, pointColorPicker);
+        setVisible(show, drawRobotCheckBox);
     }
 
     private void setPathEditVisible(boolean show) { // displays or hides the Nodes associated with selecting path components and editing properties (Path type, Speed, Color, etc.)
