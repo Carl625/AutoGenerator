@@ -64,8 +64,23 @@ public class WindowController {
     public Label editSelectPointLabel;
 
     public Label pathTypeSetText;
-    public ChoiceBox pathTypeDropdown;
+    public ChoiceBox<String> pathTypeDropdown;
     private String pathType;
+
+    // transformations
+    public Label pathTransformSetText;
+    public ChoiceBox<String> pathTransformDropdown;
+    private String currentTransform;
+
+    public Label pivotTransXPosText;
+    public Label pivotTransYPosText;
+    public Label rotRefAngleText;
+    public TextField pivotTranslateXField;
+    public TextField pivotTranslateYField;
+    public TextField rotateReflectAngleField;
+    public Button transformPathBtn;
+    private Vector2D transformVector;
+    private double transformAngle;
 
     //general
     public Label generalTextLabel;
@@ -166,7 +181,6 @@ public class WindowController {
         pathModeDropdown.getItems().add("Rigid Transform");
         pathModeDropdown.getSelectionModel().select(0);
         pathModeDropdown.setOnAction(event -> pathModeChanged());
-
         pathMode = pathModeDropdown.getItems().get(0);
 
         //path design
@@ -176,7 +190,6 @@ public class WindowController {
 
         currentPathColorPicker.setValue(Color.LAWNGREEN);
         currentPathColorPicker.setOnAction(event -> pathColorChanged());
-
         currentPathColor = currentPathColorPicker.getValue();
 
         pathComponentSnapDropdown.getItems().clear();
@@ -193,7 +206,6 @@ public class WindowController {
 
         pointColorPicker.setValue(Color.RED);
         pointColorPicker.setOnAction(event -> pointColorChanged());
-
         currentPointColor = pointColorPicker.getValue();
 
         drawRobotCheckBox.setSelected(false);
@@ -206,10 +218,29 @@ public class WindowController {
         pathTypeDropdown.getItems().add("Pure Pursuit");
         pathTypeDropdown.getSelectionModel().select(0);
         pathTypeDropdown.setOnAction(event -> pathTypeChanged());
+        pathType = pathTypeDropdown.getItems().get(0);
 
         //point editing
 
         //path transforms
+        pathTransformDropdown.getItems().clear();
+        pathTransformDropdown.getItems().add("Translate");
+        pathTransformDropdown.getItems().add("Rotate");
+        pathTransformDropdown.getItems().add("Reflect");
+        pathTransformDropdown.getSelectionModel().select(0);
+        pathTransformDropdown.setOnAction(event -> transformChanged());
+        currentTransform = pathTransformDropdown.getItems().get(0);
+
+        pivotTranslateXField.textProperty().addListener((o, ov, nv) -> pivotPosChanged());
+        pivotTranslateYField.textProperty().addListener((o, ov, nv) -> pivotPosChanged());
+        rotateReflectAngleField.textProperty().addListener((o, ov, nv) -> rotationAngleChanged());
+//        pivotXField.setOnAction(event -> pivotPosChanged());
+//        pivotYField.setOnAction(event -> pivotPosChanged());
+//        rotateAngleField.setOnAction(event -> rotationAngleChanged());
+        transformVector = new Vector2D(0, 0);
+        transformAngle = 0;
+
+        transformPathBtn.setOnAction(event -> transform());
 
         // general
         clearButton.setOnAction(event -> clearPath());
@@ -252,11 +283,20 @@ public class WindowController {
         initArmDropdown.setOnAction(event -> armDropdownChanged());
 
         // field initialization
-        autoNameField.setOnAction(event -> autoNameChanged());
-        specArmPosField.setOnAction(event -> specArmPosChanged());
-        startDragPosField.setOnAction(event -> startDragPosChanged());
-        initXField.setOnAction(event -> initPosChanged());
-        initYField.setOnAction(event -> initPosChanged());
+        autoNameField.textProperty().addListener((o, ov, nv) -> autoNameChanged());
+        specArmPosField.textProperty().addListener((o, ov, nv) -> specArmPosChanged());
+        startDragPosField.textProperty().addListener((o, ov, nv) -> startDragPosChanged());
+        initXField.textProperty().addListener((o, ov, nv) -> {if (initXField.focusedProperty().getValue()) {
+            initPosChanged();
+        }});
+        initYField.textProperty().addListener((o, ov, nv) -> {if (initYField.focusedProperty().getValue()) {
+            initPosChanged();
+        }});
+//        autoNameField.setOnAction(event -> autoNameChanged());
+//        specArmPosField.setOnAction(event -> specArmPosChanged());
+//        startDragPosField.setOnAction(event -> startDragPosChanged());
+//        initXField.setOnAction(event -> initPosChanged());
+//        initYField.setOnAction(event -> initPosChanged());
 
         specArmPosField.setText("0.22"); // this is the left servos standby position
         specArmPosField.setDisable(true);
@@ -288,7 +328,7 @@ public class WindowController {
 
             setPathDesignVisible(false);
             setPathEditVisible(false);
-            setPathRTVisible(false);
+            setPathRTVisible(false, currentTransform);
 
             switch (pathMode) {
                 case "Design":
@@ -304,7 +344,7 @@ public class WindowController {
 
                     prevMouseClick = null;
                     editSelectCompLabel.setText("Path Selected: FALSE");
-                    setPathRTVisible(true);
+                    setPathRTVisible(true, currentTransform);
                     break;
             }
         }
@@ -379,7 +419,37 @@ public class WindowController {
 
         if (newlySelected != -1) {
 
-            pathType = (String) pathTypeDropdown.getItems().get(pathTypeDropdown.getSelectionModel().getSelectedIndex());
+            pathType = pathTypeDropdown.getItems().get(pathTypeDropdown.getSelectionModel().getSelectedIndex());
+        }
+    }
+
+    private void transformChanged() {
+
+        int newlySelected = pathTransformDropdown.getSelectionModel().getSelectedIndex();
+
+        if (newlySelected != -1) {
+
+            currentTransform = pathTransformDropdown.getItems().get(newlySelected);
+            setPathRTVisible(pathMode.equals("Rigid Transform"), currentTransform);
+        }
+    }
+
+    private void transform() {
+
+        switch (currentTransform) {
+            case "Translate":
+
+                prevMouseClick = new Vector2D(initialPos);
+                translate(Vector2D.add(transformVector, initialPos));
+                prevMouseClick = null;
+                break;
+            case "Rotate":
+
+                rotatePath();
+                break;
+            case "Reflect":
+
+                break;
         }
     }
 
@@ -392,6 +462,39 @@ public class WindowController {
             String newlySelected = defStoneDropdown.getItems().get(selectIndex);
             //System.out.println("new Default Stone Dropdown value: " + newlySelected);
         }
+    }
+
+    private void pivotPosChanged() {
+
+        double x = transformVector.getComponent(0);
+        double y = transformVector.getComponent(1);
+
+        try {
+
+            x = Double.parseDouble(pivotTranslateXField.getText());
+            y = Double.parseDouble(pivotTranslateYField.getText());
+        } catch (NumberFormatException e) {
+
+            x = transformVector.getComponent(0);
+            y = transformVector.getComponent(1);
+        }
+
+        transformVector = new Vector2D(x, y);
+    }
+
+    private void rotationAngleChanged() {
+
+        double angle = transformAngle;
+
+        try {
+
+            angle = Double.parseDouble(rotateReflectAngleField.getText());
+        } catch (NumberFormatException e) {
+
+            angle = transformAngle;
+        }
+
+        transformAngle = angle;
     }
 
     private void allianceDropdownChanged() {
@@ -480,7 +583,7 @@ public class WindowController {
             y = initialPos.getComponent(1);
         }
 
-        if (valid && (orderedPathVectors.size() > 0)) {
+        if (valid && (orderedPathVectors.size() > 0) && (x != initialPos.getComponent(0) && y !=initialPos.getComponent(1))) {
 
             Vector2D newFirst = Vector2D.add(initialPos, orderedPathVectors.get(0));
             newFirst = Vector2D.sub(newFirst, new Vector2D(x, y));
@@ -695,6 +798,32 @@ public class WindowController {
         return (new Polygon(pointsFormatted));
     }
 
+    private void rotatePath() {
+
+        if (isPathInField(transformVector, Math.toRadians(transformAngle))) {
+
+            rotatePath(transformVector, Math.toRadians(transformAngle));
+
+            resetField();
+            redrawPath(pathColors.toArray(new Color[0]));
+
+            if (drawPoint) {
+                redrawPoints(pointColors.toArray(new Color[0]));
+            }
+
+            if (snapToGrid) {
+
+                drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+            }
+        } else {
+
+            Alert error = new Alert(Alert.AlertType.ERROR);
+            error.setHeaderText("Out of Bounds Error");
+            error.setContentText("The requested rotation brought the path out of bounds");
+            error.showAndWait();
+        }
+    }
+
     private void rotatePath(Vector2D pivot, double angle) {
 
         ArrayList<Vector2D> newPathPoints = generatePathPoints();
@@ -720,6 +849,7 @@ public class WindowController {
         newPathPoints.remove(newPathPoints.size() - 1);
 
         orderedPathVectors = newPathPoints;
+        pathBounds = generatePathBounds();
     }
 
     private ArrayList<Vector2D> generatePathPoints() {
@@ -773,7 +903,7 @@ public class WindowController {
         fieldGraphics.setStroke(prevStroke);
     }
 
-    public void drawGrid(Canvas c, int rows, int columns, Color gridColor, double[] padding) { // padding is {up, left, down, right}
+    private void drawGrid(Canvas c, int rows, int columns, Color gridColor, double[] padding) { // padding is {up, left, down, right}
 
         double xInterval = (c.getWidth() - padding[1] - padding[3]) / columns;
         double yInterval = (c.getHeight() - padding[0] - padding[2]) / rows;
@@ -859,45 +989,74 @@ public class WindowController {
                 prevMouseClick = null;
                 break;
             case "Rigid Transform":
-                pathComponents = getPathCompInRadiusInch(mouseClick, 10);
 
-                if (prevMouseClick == null) {
+                switch(currentTransform) {
+                    case "Translate":
 
-                    if (pathComponents.length > 0) {
+                        translate(mouseClick);
+                        break;
+                    case "Rotate":
 
-                        prevMouseClick = mouseClick;
-                        editSelectCompLabel.setText("Path Selected: TRUE");
-                    }
-                } else {
-                    Vector2D offset = Vector2D.sub(mouseClick, prevMouseClick);
 
-                    if (isPathInField(offset)) {
+                        break;
+                    case "Reflect":
 
-                        initialPos.add(offset);
-                        pathBounds = generatePathBounds();
-                        updateInitPosFields();
-
-                        resetField();
-                        resetRobotDisplay();
-                        redrawPath(pathColors.toArray(new Color[0]));
-                        //drawPathBounds();
-
-                        if (drawPoint) {
-
-                            redrawPoints();
-                        }
-
-                        if (drawRobot) {
-
-                            drawRobotInch(getCurrentPathPos());
-                        }
-                    }
-
-                    prevMouseClick = null;
-                    editSelectCompLabel.setText("Path Selected: FALSE");
+                        break;
                 }
 
                 break;
+        }
+    }
+
+    private void translate(Vector2D mouseClick) {
+
+        int[] pathComponents = getPathCompInRadiusInch(mouseClick, 10);
+
+        if (prevMouseClick == null) {
+
+            if (pathComponents.length > 0) {
+
+                prevMouseClick = mouseClick;
+                editSelectCompLabel.setText("Path Selected: TRUE");
+            }
+        } else {
+            Vector2D offset = Vector2D.sub(mouseClick, prevMouseClick);
+
+            if (isPathInField(offset)) {
+
+                initialPos.add(offset);
+                pathBounds = generatePathBounds();
+                updateInitPosFields();
+
+                resetField();
+                resetRobotDisplay();
+                redrawPath(pathColors.toArray(new Color[0]));
+                //drawPathBounds();
+
+                if (drawPoint) {
+
+                    redrawPoints();
+                }
+
+                if (snapToGrid) {
+
+                    drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+                }
+
+                if (drawRobot) {
+
+                    drawRobotInch(getCurrentPathPos());
+                }
+            } else {
+
+                Alert error = new Alert(Alert.AlertType.ERROR);
+                error.setHeaderText("Out of Bounds Error");
+                error.setContentText("The requested translation brought the path out of bounds");
+                error.showAndWait();
+            }
+
+            prevMouseClick = null;
+            editSelectCompLabel.setText("Path Selected: FALSE");
         }
     }
 
@@ -918,29 +1077,20 @@ public class WindowController {
 
     public boolean isPathInField(Vector2D pivot, double angle) {
 
-        Vector2D currentPoint = Vector2D.sub(initialPos, pivot);
-        currentPoint.rotate(angle);
-        currentPoint.add(pivot);
+        ArrayList<Vector2D> pathPoints = generatePathPoints();
+        boolean inField = true;
 
-        if (fieldBounds.contains(currentPoint.toPoint())) {
+        for (int v = 0; v < pathPoints.size() && inField; v++) {
 
-            boolean inField = true;
+            Vector2D currentPoint = pathPoints.get(v);
+            currentPoint.sub(pivot);
+            currentPoint.rotate(angle);
+            currentPoint.add(pivot);
 
-            for (int v = 0; v < orderedPathVectors.size() && inField; v++) {
-
-                currentPoint.add(orderedPathVectors.get(v));
-                currentPoint.sub(pivot);
-                currentPoint.rotate(angle);
-                currentPoint.add(pivot);
-
-                inField = fieldBounds.contains(currentPoint.toPoint());
-            }
-
-            return inField;
-        } else {
-
-            return false;
+            inField = fieldBounds.contains(currentPoint.toPoint());
         }
+
+        return inField;
     }
 
     public boolean isPathInField(Vector2D hypotheticalOffset) {
@@ -1143,8 +1293,8 @@ public class WindowController {
 
     private void setPathDesignVisible(boolean show) { // displays or hides the Nodes associated with designing the path (Selecting points, editing position, Defining Curves)
         //path
-        setVisible(show, snapToGridCheckBox);
         setVisible(show, pathText);
+        setVisible(show, snapToGridCheckBox);
         setVisible(show, pathColorSetText);
         setVisible(show, currentPathColorPicker);
         setVisible(show, compSnapText);
@@ -1170,10 +1320,78 @@ public class WindowController {
         setVisible(show, editSelectPointLabel);
     }
 
-    private void setPathRTVisible(boolean show) { // displays or hides the Nodes associated with transforming the path rigidly (Rotation, Translation, Reflection)
+    private void setPathRTVisible(boolean show, String transform) { // displays or hides the Nodes associated with transforming the path rigidly (Rotation, Translation, Reflection)
 
         setVisible(show, pathText);
         setVisible(show, editSelectCompLabel);
+        setVisible(show, pathTransformSetText);
+        setVisible(show, pathTransformDropdown);
+
+        switch (transform) {
+            case "Translate":
+
+                showRotate(false);
+                showReflect(false);
+                showTranslate(show);
+                break;
+            case "Rotate":
+
+                showTranslate(false);
+                showReflect(false);
+                showRotate(show);
+                break;
+            case "Reflect":
+
+                showTranslate(false);
+                showRotate(false);
+                showReflect(show);
+                break;
+            default:
+
+                showTranslate(false);
+                showRotate(false);
+                showReflect(false);
+                break;
+        }
+    }
+
+    private void showTranslate(boolean show) {
+
+        setVisible(show, pivotTransXPosText);
+        setVisible(show, pivotTransYPosText);
+        setVisible(show, pivotTranslateXField);
+        setVisible(show, pivotTranslateYField);
+        setVisible(show, transformPathBtn);
+
+        pivotTransXPosText.setText("Translate X");
+        pivotTransYPosText.setText("Translate Y");
+        transformPathBtn.setText("Translate Path");
+    }
+
+    private void showRotate(boolean show) {
+
+        setVisible(show, pivotTransXPosText);
+        setVisible(show, pivotTransYPosText);
+        setVisible(show, rotRefAngleText);
+        setVisible(show, pivotTranslateXField);
+        setVisible(show, pivotTranslateYField);
+        setVisible(show, rotateReflectAngleField);
+        setVisible(show, transformPathBtn);
+
+        pivotTransXPosText.setText("Pivot X Position");
+        pivotTransYPosText.setText("Pivot Y Position");
+        rotRefAngleText.setText("Rotation Angle");
+        transformPathBtn.setText("Rotate Path");
+    }
+
+    private void showReflect(boolean show) {
+
+        setVisible(show, rotRefAngleText);
+        setVisible(show, rotateReflectAngleField);
+        setVisible(show, transformPathBtn);
+
+        rotRefAngleText.setText("Reflection Line Angle");
+        transformPathBtn.setText("Reflect Path");
     }
 
     /*---------- Testers ----------*/
