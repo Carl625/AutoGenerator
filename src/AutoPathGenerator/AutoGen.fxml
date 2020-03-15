@@ -155,10 +155,14 @@
                                   <Insets top="10.0" />
                               </GridPane.margin>
                           </Label>
-                          <ChoiceBox fx:id="pointTypeDropdown" prefWidth="150.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER" />
-                          <Label fx:id="pointTypeSetText" text="Select Point Type" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
+                          <ChoiceBox fx:id="pointTypeDropdown" prefWidth="150.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
                               <GridPane.margin>
-                                  <Insets top="13.0" />
+                                  <Insets top="10.0" />
+                              </GridPane.margin>
+                          </ChoiceBox>
+                          <Label fx:id="pointTypeSetText" text="Set Selected Point Type" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
+                              <GridPane.margin>
+                                  <Insets top="10.0" />
                               </GridPane.margin>
                               <font>
                                   <Font size="15.0" />

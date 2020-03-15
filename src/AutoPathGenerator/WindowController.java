@@ -1516,6 +1516,8 @@ public class WindowController {
         //point
         setVisible(show, pointText);
         setVisible(show, editSelectPointLabel);
+        setVisible(show, pointTypeSetText);
+        setVisible(show, pointTypeDropdown);
     }
 
     private void setPathRTVisible(boolean show, String transform) { // displays or hides the Nodes associated with transforming the path rigidly (Rotation, Translation, Reflection)
