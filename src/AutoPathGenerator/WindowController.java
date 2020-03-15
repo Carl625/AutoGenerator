@@ -69,6 +69,10 @@ public class WindowController {
     public ChoiceBox<String> pathTypeDropdown;
     private String pathType;
 
+    public Label pointTypeSetText;
+    public ChoiceBox<String> pointTypeDropdown;
+    private String pointType;
+
     // transformations
     public Label pathTransformSetText;
     public ChoiceBox<String> pathTransformDropdown;
@@ -223,6 +227,12 @@ public class WindowController {
         pathType = pathTypeDropdown.getItems().get(0);
 
         //point editing
+        pointTypeDropdown.getItems().clear();
+        pointTypeDropdown.getItems().add("Regular");
+        pointTypeDropdown.getItems().add("Forked"); // TODO: add another textfield that either appears or becomes enabled when this is selected to specify what variable it should depend on? Work it out dude
+        pointTypeDropdown.getSelectionModel().select(0);
+        pointTypeDropdown.setOnAction(event -> pointTypeChanged());
+        pointType = pointTypeDropdown.getItems().get(0);
 
         //path transforms
         pathTransformDropdown.getItems().clear();
@@ -405,6 +415,16 @@ public class WindowController {
         if (newlySelected != -1) {
 
             pathType = pathTypeDropdown.getItems().get(pathTypeDropdown.getSelectionModel().getSelectedIndex());
+        }
+    }
+
+    private void pointTypeChanged() {
+
+        int newlySelected = pointTypeDropdown.getSelectionModel().getSelectedIndex();
+
+        if (newlySelected != -1) {
+
+            pointType = pointTypeDropdown.getItems().get(pointTypeDropdown.getSelectionModel().getSelectedIndex());
         }
     }
 
@@ -777,8 +797,11 @@ public class WindowController {
 
         ArrayList<Integer> interceptPointIndexes = new ArrayList<Integer>();
 
-        Circle selectionBounds = new Circle(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) - radius, radius);
+        Circle selectionBounds = new Circle(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) + radius, radius * 2);
         ArrayList<Vector2D> pathPoints = generatePathPoints();
+
+//        Vector2D fieldPosCanvas = convertFieldToCanvas(new Vector2D(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) + radius));
+//        fieldGraphics.strokeOval(fieldPosCanvas.getComponent(0), fieldPosCanvas.getComponent(1), (radius * 2 * pixelsPerInch), (radius * 2 * pixelsPerInch));
 
         for (int p = 0; p < pathPoints.size(); p++) {
 
@@ -1084,6 +1107,7 @@ public class WindowController {
         Vector2D mouseClick = new Vector2D(mouseEvent.getSceneX() - fieldDisplay.getLayoutX(), mouseEvent.getSceneY() - fieldDisplay.getLayoutY());
         Vector2D mouseCorrection = new Vector2D(0, -28);
         mouseClick.add(mouseCorrection);
+        //fieldGraphics.strokeOval(mouseClick.getComponent(0) - 10, mouseClick.getComponent(1) - 10, 20, 20);
         mouseClick = convertCanvasToField(mouseClick);
         //System.out.println("Mouse pressed at: " + mouseClick);
 
@@ -1137,6 +1161,14 @@ public class WindowController {
                 if (pathComponents.length != 0) {
 
                     editSelectCompLabel.setText("Selected Component: " + pathComponents[pathComponents.length - 1]);
+                }
+
+                int[] pathPoints = getPointInRadiusInch(mouseClick, 2);
+                System.out.println("Path Points Clicked: " + Arrays.toString(pathPoints));
+
+                if (pathPoints.length != 0) {
+
+                    editSelectPointLabel.setText("Selected Point: " + pathPoints[pathPoints.length - 1]);
                 }
 
                 prevMouseClick = null;

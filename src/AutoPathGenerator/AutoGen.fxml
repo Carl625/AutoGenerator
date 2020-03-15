@@ -34,6 +34,7 @@
                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                     </rowConstraints>
                       <children>
                           <Label fx:id="pathText" text="Path" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="TOP">
@@ -104,6 +105,19 @@
                                   <Insets top="10.0" />
                               </GridPane.margin>
                           </ColorPicker>
+                          <CheckBox fx:id="snapToGridCheckBox" mnemonicParsing="false" text="Snap To Grid" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
+                              <GridPane.margin>
+                                  <Insets top="20.0" />
+                              </GridPane.margin>
+                              <font>
+                                  <Font size="14.0" />
+                              </font>
+                          </CheckBox>
+                          <CheckBox fx:id="drawRobotCheckBox" mnemonicParsing="false" text="Draw Robot" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="3" GridPane.valignment="CENTER">
+                              <font>
+                                  <Font size="14.0" />
+                              </font>
+                          </CheckBox>
                           <Label text="Path Mode" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.valignment="TOP">
                               <GridPane.margin>
                                   <Insets top="15.0" />
@@ -120,50 +134,6 @@
                                   <Font size="14.0" />
                               </font>
                           </Label>
-                          <Label fx:id="generalTextLabel" text="General" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="5" GridPane.valignment="TOP">
-                              <GridPane.margin>
-                                  <Insets />
-                              </GridPane.margin>
-                              <font>
-                                  <Font size="24.0" />
-                              </font>
-                          </Label>
-                          <Button fx:id="undoButton" alignment="CENTER" mnemonicParsing="false" text="Undo" GridPane.halignment="RIGHT" GridPane.rowIndex="5" GridPane.valignment="CENTER">
-                              <GridPane.margin>
-                                  <Insets right="15.0" top="10.0" />
-                              </GridPane.margin>
-                              <padding>
-                                  <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
-                              </padding>
-                          </Button>
-                          <Button fx:id="redoButton" alignment="CENTER" mnemonicParsing="false" text="Redo" GridPane.columnIndex="1" GridPane.rowIndex="5">
-                              <GridPane.margin>
-                                  <Insets left="15.0" top="10.0" />
-                              </GridPane.margin>
-                              <padding>
-                                  <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
-                              </padding>
-                          </Button>
-                          <Button fx:id="clearButton" alignment="CENTER" mnemonicParsing="false" text="Clear Path" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="5" GridPane.valignment="CENTER">
-                              <GridPane.margin>
-                                  <Insets top="115.0" />
-                              </GridPane.margin>
-                              <padding>
-                                  <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
-                              </padding>
-                          </Button>
-                          <CheckBox fx:id="snapToGridCheckBox" mnemonicParsing="false" text="Snap To Grid" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
-                              <GridPane.margin>
-                                  <Insets top="20.0" />
-                              </GridPane.margin>
-                              <font>
-                                  <Font size="14.0" />
-                              </font>
-                          </CheckBox>
-                          <CheckBox fx:id="drawRobotCheckBox" mnemonicParsing="false" text="Draw Robot" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="3" GridPane.valignment="CENTER">
-                              <font>
-                                  <Font size="14.0" />
-                              </font></CheckBox>
                           <Label fx:id="editSelectPointLabel" text="Selected Point: NONE" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="CENTER">
                               <font>
                                   <Font size="14.0" />
@@ -184,6 +154,15 @@
                               <GridPane.margin>
                                   <Insets top="10.0" />
                               </GridPane.margin>
+                          </Label>
+                          <ChoiceBox fx:id="pointTypeDropdown" prefWidth="150.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER" />
+                          <Label fx:id="pointTypeSetText" text="Select Point Type" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
+                              <GridPane.margin>
+                                  <Insets top="13.0" />
+                              </GridPane.margin>
+                              <font>
+                                  <Font size="15.0" />
+                              </font>
                           </Label>
                           <Label fx:id="pathTransformSetText" text="Choose a path transformation" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
                               <GridPane.margin>
@@ -231,15 +210,47 @@
                           </TextField>
                           <TextField fx:id="rotateReflectAngleField" text="0" GridPane.columnIndex="1" GridPane.rowIndex="2" GridPane.valignment="TOP">
                               <GridPane.margin>
-                                  <Insets bottom="10" left="40" right="40" top="10"/>
+                                  <Insets bottom="10" left="40" right="40" top="10" />
                               </GridPane.margin>
                           </TextField>
-                          <Button fx:id="transformPathBtn" text="Rotate Path" GridPane.columnIndex="1" GridPane.rowIndex = "2" GridPane.valignment="BOTTOM" GridPane.halignment="CENTER">
+                          <Button fx:id="transformPathBtn" text="Rotate Path" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="BOTTOM">
                               <font>
-                                  <Font size="18"/>
+                                  <Font size="18" />
                               </font>
                           </Button>
-                      </children>
+                          <Label fx:id="generalTextLabel" text="General" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="5" GridPane.valignment="TOP">
+                              <GridPane.margin>
+                                  <Insets />
+                              </GridPane.margin>
+                              <font>
+                                  <Font size="24.0" />
+                              </font>
+                          </Label>
+                          <Button fx:id="undoButton" alignment="CENTER" mnemonicParsing="false" text="Undo" GridPane.halignment="RIGHT" GridPane.rowIndex="5" GridPane.valignment="CENTER">
+                              <GridPane.margin>
+                                  <Insets right="15.0" top="10.0" />
+                              </GridPane.margin>
+                              <padding>
+                                  <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                              </padding>
+                          </Button>
+                          <Button fx:id="redoButton" alignment="CENTER" mnemonicParsing="false" text="Redo" GridPane.columnIndex="1" GridPane.rowIndex="5">
+                              <GridPane.margin>
+                                  <Insets left="15.0" top="10.0" />
+                              </GridPane.margin>
+                              <padding>
+                                  <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                              </padding>
+                          </Button>
+                          <Button fx:id="clearButton" alignment="CENTER" mnemonicParsing="false" text="Clear Path" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="5" GridPane.valignment="CENTER">
+                              <GridPane.margin>
+                                  <Insets top="115.0" />
+                              </GridPane.margin>
+                              <padding>
+                                  <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                              </padding>
+                          </Button>
+                     </children>
                   </GridPane>
                    <Canvas fx:id="fieldDisplay" height="700.0" onMouseClicked="#fieldClicked" width="700.0" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />
                    <Canvas fx:id="robotDisplay" height="700.0" onMouseClicked="#fieldClicked" width="700.0" GridPane.halignment="CENTER" GridPane.valignment="CENTER" />
