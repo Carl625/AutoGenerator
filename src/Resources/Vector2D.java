@@ -199,6 +199,21 @@ public class Vector2D {
         return (new Vector2D(newX, newY));
     }
 
+    public static double dot(Vector2D term_one, Vector2D term_two) {
+
+        double[] one_comp = term_one.getComponents();
+        double[] two_comp = term_two.getComponents();
+
+        return ((one_comp[0] * two_comp[0]) + (one_comp[1] * two_comp[1]));
+    }
+
+    public static double crossMag(Vector2D term_one, Vector2D term_two) {
+
+        double k = ((term_one.getComponent(0) * term_two.getComponent(1)) - (term_one.getComponent(1) * term_two.getComponent(0)));
+
+        return k;
+    }
+
     public void zero() {
 
         this.scale(0);
@@ -232,6 +247,13 @@ public class Vector2D {
         double[] two_comp = term_two.getComponents();
 
         return ((components[0] * two_comp[0]) + (components[1] * two_comp[1]));
+    }
+
+    public double crossMag(Vector2D term_two) {
+
+        double k = ((components[0] * term_two.getComponent(1)) - (components[1] * term_two.getComponent(0)));
+
+        return k;
     }
 
     public double angleBetween(Vector2D v2) {

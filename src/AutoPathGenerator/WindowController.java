@@ -17,6 +17,8 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class WindowController {
 
@@ -353,20 +355,8 @@ public class WindowController {
     private void snapToGridChanged() {
 
         snapToGrid = snapToGridCheckBox.isSelected();
-        resetField();
 
-        if (snapToGrid) {
-
-
-            drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
-        }
-
-        redrawPath(pathColors.toArray(new Color[0]));
-
-        if (drawPoint) {
-
-            redrawPoints(pointColors.toArray(new Color[0]));
-        }
+        resetPathSpec();
     }
 
     private void pathColorChanged() {
@@ -377,13 +367,8 @@ public class WindowController {
     private void drawPointChanged() {
 
         drawPoint = drawPointCheckBox.isSelected();
-        resetField();
-        redrawPath(pathColors.toArray(new Color[0]));
 
-        if (drawPoint) {
-
-            redrawPoints(pointColors.toArray(new Color[0]));
-        }
+        resetPathSpec();
     }
 
     private void pointColorChanged() {
@@ -449,6 +434,7 @@ public class WindowController {
                 break;
             case "Reflect":
 
+                reflectPath();
                 break;
         }
     }
@@ -495,6 +481,23 @@ public class WindowController {
         }
 
         transformAngle = angle;
+
+        if (currentTransform.equals("Reflect")) {
+
+            resetField();
+            drawReflectionLine();
+            redrawPath(pathColors.toArray(new Color[0]));
+
+            if (drawPoint) {
+
+                redrawPoints(pointColors.toArray(new Color[0]));
+            }
+
+            if (snapToGrid) {
+
+                drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+            }
+        }
     }
 
     private void allianceDropdownChanged() {
@@ -594,18 +597,7 @@ public class WindowController {
 
         if (valid) {
 
-            resetField();
-            redrawPath(pathColors.toArray(new Color[0]));
-
-            if (drawPoint) {
-
-                redrawPoints(pointColors.toArray(new Color[0]));
-            }
-
-            if (snapToGrid) {
-
-                drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
-            }
+            resetPathSpec();
         }
     }
 
@@ -624,13 +616,19 @@ public class WindowController {
         pointColors.add(currentPointColor);
 
         resetField();
-        resetRobotDisplay();
-        redrawPath(pathColors.toArray(new Color[0]));
+        drawPointField(fieldDisplay, initialPos, pointColors.get(0), 6);
+
+        if (pathMode.equals("Rigid Transform") && currentTransform.equals("Reflect")) {
+
+            drawReflectionLine();
+        }
 
         if (snapToGrid) {
 
             drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
         }
+
+        resetRobotDisplay();
     }
 
     private void undo() { // how should I make the undo stack generalized? make them strings for specific actions encoded in a method?
@@ -650,6 +648,11 @@ public class WindowController {
 
     /*---------- Data Manipulation/Internal Processing ----------*/
 
+    /**
+     * Given a vector in the field's coordinate system, this method computes what the point would be in the canvas' coordinate system
+     * @param fieldPos Some point in the field's coordinate system
+     * @return  The same point in the canvas' coordinate system
+     */
     public Vector2D convertFieldToCanvas(Vector2D fieldPos) {
 
         fieldPos = new Vector2D(fieldPos);
@@ -664,6 +667,11 @@ public class WindowController {
         return fieldPos;
     }
 
+    /**
+     * Given a vector in the canvas' coordinate system, this method computes what the point would be in the field's coordinate system
+     * @param canvasPos Some point in the canvas' coordinate system
+     * @return  The same point in the field's coordinate system
+     */
     public Vector2D convertCanvasToField(Vector2D canvasPos) {
 
         canvasPos = new Vector2D(canvasPos);
@@ -678,6 +686,11 @@ public class WindowController {
         return canvasPos;
     }
 
+    /**
+     * Takes a hypothetical path vector and uses the field display's dimensions to compute the path component that would move the path to the nearest grid intersection relative to where the uncorrected path component would land
+     * @param termPos   The movement vector before correction
+     * @return  The corrected path vector
+     */
     public Vector2D snapToGridField(Vector2D termPos) {
 
         double pixelsPerCol = (670.0 / 12.0);
@@ -695,7 +708,12 @@ public class WindowController {
         return termPos;
     }
 
-    public double normalizeAngle(double degrees) {
+    /**
+     * takes an angle and normalizes it to be between 0 and 360 degrees
+     * @param degrees   The angle to normalize in degrees
+     * @return  The normalized angle
+     */
+    public static double normalizeAngle(double degrees) {
 
         while (degrees < 0) {
 
@@ -722,18 +740,25 @@ public class WindowController {
         return currentPos;
     }
 
+    /**
+     *  Returns a list of indexes of path components found in some circular area of the canvas
+     * @param fieldPos  A position in the field's coordinate system where the method checks for path components, in Inches
+     * @param radius    The radius of the selection circle around the fieldPos in Inches
+     * @return          An Arraylist of integers representing the indexes of the path components found
+     */
     public int[] getPathCompInRadiusInch(Vector2D fieldPos, double radius) {
 
-        fieldPos = convertFieldToCanvas(fieldPos);
         ArrayList<Integer> interceptComponentIndexes = new ArrayList<Integer>();
 
-//        System.out.println("Field Position: " + fieldPos);
-//        graphics.strokeOval(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) - radius, radius * 2, radius * 2);
+        // convert parameters to canvas coordinates b/c the pathbounds are already polygons in the canvas coordinate system and they're harder to convert
+        fieldPos = convertFieldToCanvas(fieldPos);
+        radius /= pixelsPerInch;
+        Circle selectionBounds = new Circle(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) - radius, radius);
 
         for (int v = 0; v < pathBounds.size(); v++) {
             Polygon vectorBox = pathBounds.get(v);
 
-            if (vectorBox.intersects(new Circle(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) - radius, radius).getBoundsInLocal())) {
+            if (vectorBox.intersects(selectionBounds.getBoundsInLocal())) {
 
                 interceptComponentIndexes.add(v);
             }
@@ -742,6 +767,34 @@ public class WindowController {
         return (interceptComponentIndexes.stream().mapToInt(a -> a).toArray());
     }
 
+    /**
+     * Returns a list of indexes of path points found within a circular area of the canvas
+     * @param fieldPos  A position in the field's coordinate system where the method checks for path points, in Inches
+     * @param radius    The radius of the selection circle around the fieldPos in Inches
+     * @return          An Arraylist of integers representing the indexes of the path points found
+     */
+    public int[] getPointInRadiusInch(Vector2D fieldPos, double radius) {
+
+        ArrayList<Integer> interceptPointIndexes = new ArrayList<Integer>();
+
+        Circle selectionBounds = new Circle(fieldPos.getComponent(0) - radius, fieldPos.getComponent(1) - radius, radius);
+        ArrayList<Vector2D> pathPoints = generatePathPoints();
+
+        for (int p = 0; p < pathPoints.size(); p++) {
+
+            if (selectionBounds.contains(pathPoints.get(p).toPoint())) {
+
+                interceptPointIndexes.add(p);
+            }
+        }
+
+        return (interceptPointIndexes.stream().mapToInt(a -> a).toArray());
+    }
+
+    /**
+     * Computes the bounding boxes for the path components given the current initial position and ordered path components
+     * @return      An ArrayList of Polygons representing the bounding boxes of the path components in the canvas' coordinate system
+     */
     private ArrayList<Polygon> generatePathBounds() {
 
         int vectorBoundExtension = 5;
@@ -759,6 +812,13 @@ public class WindowController {
         return boundingBoxes;
     }
 
+    /**
+     * Computes the individual bounding box for a single path component
+     * @param initPos       The path component's initial position in the field's coordinate system
+     * @param pathComponent The transformation of the initial point to the final point along the path component as the intermediate vector
+     * @param boundSize     The distance of a line perpendicular to the vector that intercepts both the path component and the bounding box wall parallel to the vector
+     * @return              The bounding box as a polygon in the canvas' coordinate system
+     */
     private Polygon generateVectorBounds(Vector2D initPos, Vector2D pathComponent, double boundSize) {
 
         initPos = convertFieldToCanvas(initPos);
@@ -792,29 +852,22 @@ public class WindowController {
         boundingBoxPoints.add(point.getComponent(0));
         boundingBoxPoints.add(point.getComponent(1));
 
-        // for some stupid reason the JavaFX polygon class requires the points as an even list of doubles with the x and the y coordinate alternating ex. (x0, y0, x1, y1,...)
+        // for some weird reason the JavaFX polygon class requires the points as an even list of doubles with the x and the y coordinate alternating ex. (x0, y0, x1, y1,...)
         double[] pointsFormatted = boundingBoxPoints.stream().mapToDouble(a -> a).toArray();
 
         return (new Polygon(pointsFormatted));
     }
 
+    /**
+     * Rotates the current path given the current transform vector and transform angle, mainly here as something to automatically have the transform button's change listener to have something to call
+     */
     private void rotatePath() {
 
         if (isPathInField(transformVector, Math.toRadians(transformAngle))) {
 
             rotatePath(transformVector, Math.toRadians(transformAngle));
 
-            resetField();
-            redrawPath(pathColors.toArray(new Color[0]));
-
-            if (drawPoint) {
-                redrawPoints(pointColors.toArray(new Color[0]));
-            }
-
-            if (snapToGrid) {
-
-                drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
-            }
+            resetPathSpec();
         } else {
 
             Alert error = new Alert(Alert.AlertType.ERROR);
@@ -824,6 +877,11 @@ public class WindowController {
         }
     }
 
+    /**
+     * Actually takes in a specific pivot point and angle to rotate the current path with
+     * @param pivot The point in the field's coordinate system that the path is to pivot around
+     * @param angle The angle (Radians) in standard position that you want the path to rotate
+     */
     private void rotatePath(Vector2D pivot, double angle) {
 
         ArrayList<Vector2D> newPathPoints = generatePathPoints();
@@ -835,8 +893,6 @@ public class WindowController {
             currentPoint.rotate(angle);
             currentPoint.add(pivot);
         }
-
-        //System.out.println(newPathPoints);
 
         initialPos = new Vector2D(newPathPoints.get(0));
         updateInitPosFields();
@@ -854,19 +910,116 @@ public class WindowController {
 
     private ArrayList<Vector2D> generatePathPoints() {
 
+        return generatePathPoints(initialPos, orderedPathVectors);
+    }
+
+    public static ArrayList<Vector2D> generatePathPoints(Vector2D initialPosition, ArrayList<Vector2D> pathComponents) {
+
         ArrayList<Vector2D> pathPoints = new ArrayList<>();
-        Vector2D currentPoint = new Vector2D(initialPos);
+        pathComponents = new ArrayList<>(pathComponents);
+        Vector2D currentPoint = new Vector2D(initialPosition);
         pathPoints.add(new Vector2D(currentPoint));
 
-        for (int p = 0; p < orderedPathVectors.size(); p++) {
+        for (int p = 0; p < pathComponents.size(); p++) {
 
-            currentPoint.add(orderedPathVectors.get(p));
+            currentPoint.add(pathComponents.get(p));
             pathPoints.add(new Vector2D(currentPoint));
         }
 
         return pathPoints;
     }
 
+    private void reflectPath() {
+
+        if (isPathinField(transformAngle)) {
+
+            reflectPath(transformAngle);
+
+            resetField();
+            drawReflectionLine();
+            redrawPath(pathColors.toArray(new Color[0]));
+
+            if (drawPoint) {
+
+                redrawPoints(pointColors.toArray(new Color[0]));
+            }
+
+            if (snapToGrid) {
+
+                drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+            }
+
+            drawRobotChanged();
+        } else {
+
+            Alert error = new Alert(Alert.AlertType.ERROR);
+            error.setHeaderText("Out of Bounds Error");
+            error.setContentText("The requested reflection brought the path out of bounds");
+            error.showAndWait();
+        }
+    }
+
+    /**
+     *
+     * @param reflectionAngle  The angle the line of reflection makes with the horizontal in standard position (Degrees)
+     */
+    private void reflectPath(double reflectionAngle) {
+
+       ArrayList<Vector2D> newPathPoints = generatePathPoints();
+
+       for (int p = 0; p < newPathPoints.size(); p++) {
+
+           newPathPoints.set(p, reflectPoint(newPathPoints.get(p), reflectionAngle));
+       }
+
+        initialPos = new Vector2D(newPathPoints.get(0));
+        updateInitPosFields();
+
+        for (int p = 1; p < newPathPoints.size(); p++) {
+
+            newPathPoints.set(p - 1, Vector2D.sub(newPathPoints.get(p), newPathPoints.get(p - 1)));
+        }
+
+        newPathPoints.remove(newPathPoints.size() - 1);
+
+        orderedPathVectors = newPathPoints;
+        pathBounds = generatePathBounds();
+    }
+
+    private static Vector2D reflectPoint(Vector2D point, double reflectionAngle) {
+
+        Vector2D lineRepresentation = new Vector2D(reflectionAngle, 1, false);
+        double distance = Vector2D.crossMag(point, lineRepresentation) / lineRepresentation.getMag();
+
+        double toNextPointAngle = normalizeAngle(reflectionAngle + 90);
+        Vector2D reflectedPoint = Vector2D.add(point, new Vector2D(toNextPointAngle, distance * 2, false));
+
+        return reflectedPoint;
+    }
+
+    private void drawReflectionLine() {
+
+        double radius = (700.0 / 2.0) * Math.sqrt(2);
+
+        double xOffset = fieldDisplay.getWidth() / 2.0;
+        double yOffset = fieldDisplay.getHeight() / 2.0;
+        Vector2D centerOffset = new Vector2D(xOffset, yOffset);
+        Vector2D initPoint = new Vector2D(transformAngle, radius, false);
+        Vector2D termPoint = new Vector2D(transformAngle + 180, radius, false);
+        initPoint.flipDimension(1);
+        termPoint.flipDimension(1);
+        initPoint.add(centerOffset);
+        termPoint.add(centerOffset);
+
+        Color prevStroke = (Color) fieldGraphics.getStroke();
+        fieldGraphics.setStroke(Color.DARKBLUE);
+        fieldGraphics.strokeLine(initPoint.getComponent(0), initPoint.getComponent(1), termPoint.getComponent(0), termPoint.getComponent(1));
+        fieldGraphics.setStroke(prevStroke);
+    }
+
+    /**
+     * Simply uses the currently defined path bounds and draws them on the field display
+     */
     private void drawPathBounds() {
 
         for (int p = 0; p < pathBounds.size(); p++) {
@@ -977,7 +1130,7 @@ public class WindowController {
                 break;
             case "Edit Components":
 
-                int[] pathComponents = getPathCompInRadiusInch(mouseClick, 10);
+                int[] pathComponents = getPathCompInRadiusInch(mouseClick, 2);
                 //drawPathBounds();
                 System.out.println("Path Components Clicked: " + Arrays.toString(pathComponents));
 
@@ -1010,7 +1163,7 @@ public class WindowController {
 
     private void translate(Vector2D mouseClick) {
 
-        int[] pathComponents = getPathCompInRadiusInch(mouseClick, 10);
+        int[] pathComponents = getPathCompInRadiusInch(mouseClick, 2);
 
         if (prevMouseClick == null) {
 
@@ -1028,20 +1181,7 @@ public class WindowController {
                 pathBounds = generatePathBounds();
                 updateInitPosFields();
 
-                resetField();
-                resetRobotDisplay();
-                redrawPath(pathColors.toArray(new Color[0]));
-                //drawPathBounds();
-
-                if (drawPoint) {
-
-                    redrawPoints();
-                }
-
-                if (snapToGrid) {
-
-                    drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
-                }
+                resetPathSpec();
 
                 if (drawRobot) {
 
@@ -1070,9 +1210,40 @@ public class WindowController {
         robotGraphics.clearRect(0, 0, robotDisplay.getWidth(), robotDisplay.getHeight());
     }
 
+    public void resetPathSpec() {
+
+        resetField();
+        redrawPath(pathColors.toArray(new Color[0]));
+
+        if (drawPoint) {
+
+            redrawPoints(pointColors.toArray(new Color[0]));
+        }
+
+        if (snapToGrid) {
+
+            drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+        }
+    }
+
     public boolean isPathInField() {
 
         return isPathInField(new Vector2D(0, 0));
+    }
+
+    public boolean isPathinField(double reflectionAngle) {
+
+        ArrayList<Vector2D> pathPoints = generatePathPoints();
+        boolean inField = true;
+
+        for (int p = 0; p < pathPoints.size() && inField; p++) {
+
+            Vector2D currentPoint = reflectPoint(pathPoints.get(p), reflectionAngle);
+
+            inField = fieldBounds.contains(currentPoint.toPoint());
+        }
+
+        return inField;
     }
 
     public boolean isPathInField(Vector2D pivot, double angle) {
@@ -1177,11 +1348,6 @@ public class WindowController {
 
         initPoint = new Vector2D(initPoint);
         termPoint = new Vector2D(termPoint);
-
-//        if (c.contains(initPoint.toPoint()) && c.contains(termPoint.toPoint())) { // reinstate this if drawing algorithm has problems, but the graphics algorithm doesn't seem to have problems
-//
-//
-//        }
 
         GraphicsContext g = c.getGraphicsContext2D();
         Color prevStroke = (Color) g.getStroke();
@@ -1326,6 +1492,7 @@ public class WindowController {
         setVisible(show, editSelectCompLabel);
         setVisible(show, pathTransformSetText);
         setVisible(show, pathTransformDropdown);
+        resetPathSpec();
 
         switch (transform) {
             case "Translate":
@@ -1341,6 +1508,10 @@ public class WindowController {
                 showRotate(show);
                 break;
             case "Reflect":
+
+                if (show) {
+                    drawReflectionLine();
+                }
 
                 showTranslate(false);
                 showRotate(false);
@@ -1407,5 +1578,32 @@ public class WindowController {
 //            System.out.println("Loop theta: " + theta);
         }
         System.out.println("Finished!");
+    }
+
+    private static void reflectionTester() {
+
+        Vector2D initialPosition = new Vector2D(63, -36);
+        Vector2D[] path = {
+                new Vector2D(-12, 12),
+                new Vector2D(0, 12),
+                new Vector2D(-36, 0)
+        };
+
+        ArrayList<Vector2D> newPath = new ArrayList<>();
+        newPath.addAll(Arrays.asList(path));
+
+        ArrayList<Vector2D> pathPoints = generatePathPoints(initialPosition, newPath);
+        System.out.println(pathPoints);
+
+        for (int p = 0; p < pathPoints.size(); p++) {
+
+            Vector2D currentPoint = reflectPoint(pathPoints.get(p), 90);
+            System.out.println(p + ": " + currentPoint);
+        }
+    }
+
+    public static void main(String[] args) {
+
+        reflectionTester();
     }
 }
