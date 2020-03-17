@@ -72,6 +72,9 @@ public class WindowController {
     public ChoiceBox<String> pointTypeDropdown;
     private String pointType;
 
+    public Label forkViewText;
+    public TreeView forkTreeView;
+
     // transformations
     public Label pathTransformSetText;
     public ChoiceBox<String> pathTransformDropdown;
@@ -181,6 +184,8 @@ public class WindowController {
 
         //testers
         //vectorDrawTester();
+
+        specListener.pathModeChanged();
     }
 
     private void initPathDef() {
@@ -228,14 +233,17 @@ public class WindowController {
         pathTypeDropdown.getItems().add("Pure Pursuit");
         pathTypeDropdown.getSelectionModel().select(0);
         pathTypeDropdown.setOnAction(event -> specListener.pathTypeChanged());
+        pathTypeDropdown.setDisable(true);
         pathType = pathTypeDropdown.getItems().get(0);
 
         //point editing
         pointTypeDropdown.getItems().clear();
         pointTypeDropdown.getItems().add("Regular");
-        pointTypeDropdown.getItems().add("Forked"); // TODO: add another textfield that either appears or becomes enabled when this is selected to specify what variable it should depend on? Work it out dude
+        pointTypeDropdown.getItems().add("Fork - Start"); // TODO: add another textfield that either appears or becomes enabled when this is selected to specify what variable it should depend on? Work it out dude
+        pointTypeDropdown.getItems().add("Fork - End");
         pointTypeDropdown.getSelectionModel().select(0);
         pointTypeDropdown.setOnAction(event -> specListener.pointTypeChanged());
+        pointTypeDropdown.setDisable(true);
         pointType = pointTypeDropdown.getItems().get(0);
 
         //path transforms
@@ -431,6 +439,7 @@ public class WindowController {
             if (newlySelected != -1) {
 
                 pointType = pointTypeDropdown.getItems().get(pointTypeDropdown.getSelectionModel().getSelectedIndex());
+                display.setPathEditVisible(true);
             }
         }
 
@@ -1161,6 +1170,10 @@ public class WindowController {
                     if (pathComponents.length != 0) {
 
                         editSelectCompLabel.setText("Selected Component: " + pathComponents[pathComponents.length - 1]);
+                        pathTypeDropdown.setDisable(false);
+                    } else {
+
+                        pathTypeDropdown.setDisable(true);
                     }
 
                     int[] pathPoints = getPointInRadiusInch(mouseClick, 2);
@@ -1169,6 +1182,10 @@ public class WindowController {
                     if (pathPoints.length != 0) {
 
                         editSelectPointLabel.setText("Selected Point: " + pathPoints[pathPoints.length - 1]);
+                        pointTypeDropdown.setDisable(false);
+                    } else {
+
+                        pointTypeDropdown.setDisable(true);
                     }
 
                     prevMouseClick = null;
@@ -1633,6 +1650,14 @@ public class WindowController {
             setVisible(show, editSelectPointLabel);
             setVisible(show, pointTypeSetText);
             setVisible(show, pointTypeDropdown);
+
+            if (pointType.equals("Regular")) {
+
+                show = false;
+            }
+
+            setVisible(show, forkViewText);
+            setVisible(show, forkTreeView);
         }
 
         private void setPathRTVisible(boolean show, String transform) { // displays or hides the Nodes associated with transforming the path rigidly (Rotation, Translation, Reflection)

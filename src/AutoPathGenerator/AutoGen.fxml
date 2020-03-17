@@ -27,14 +27,14 @@
                       <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
                     </columnConstraints>
                     <rowConstraints>
-                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                      <RowConstraints maxHeight="93.0" minHeight="10.0" prefHeight="93.0" vgrow="SOMETIMES" />
+                      <RowConstraints maxHeight="118.66665649414062" minHeight="10.0" prefHeight="112.0" vgrow="SOMETIMES" />
+                      <RowConstraints maxHeight="140.33331298828125" minHeight="10.0" prefHeight="121.0" vgrow="SOMETIMES" />
+                        <RowConstraints maxHeight="213.0" minHeight="10.0" prefHeight="101.66668701171875" vgrow="SOMETIMES" />
+                        <RowConstraints maxHeight="124.33334350585938" minHeight="0.0" prefHeight="92.0" vgrow="SOMETIMES" />
+                        <RowConstraints maxHeight="120.33331298828125" minHeight="10.0" prefHeight="100.33331298828125" vgrow="SOMETIMES" />
+                        <RowConstraints maxHeight="105.66668701171875" minHeight="10.0" prefHeight="76.66668701171875" vgrow="SOMETIMES" />
+                        <RowConstraints maxHeight="59.33331298828125" minHeight="10.0" prefHeight="59.33331298828125" vgrow="SOMETIMES" />
                     </rowConstraints>
                       <children>
                           <Label fx:id="pathText" text="Path" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="TOP">
@@ -99,6 +99,9 @@
                               <GridPane.margin>
                                   <Insets top="10.0" />
                               </GridPane.margin>
+                           <padding>
+                              <Insets top="10.0" />
+                           </padding>
                           </Label>
                           <ColorPicker fx:id="pointColorPicker" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
                               <GridPane.margin>
@@ -113,10 +116,13 @@
                                   <Font size="14.0" />
                               </font>
                           </CheckBox>
-                          <CheckBox fx:id="drawRobotCheckBox" mnemonicParsing="false" text="Draw Robot" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="3" GridPane.valignment="CENTER">
+                          <CheckBox fx:id="drawRobotCheckBox" mnemonicParsing="false" text="Draw Robot" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="1" GridPane.valignment="BOTTOM">
                               <font>
                                   <Font size="14.0" />
                               </font>
+                           <GridPane.margin>
+                              <Insets />
+                           </GridPane.margin>
                           </CheckBox>
                           <Label text="Path Mode" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.valignment="TOP">
                               <GridPane.margin>
@@ -168,6 +174,19 @@
                                   <Font size="15.0" />
                               </font>
                           </Label>
+                          <Label fx:id="forkViewText" text="Current Fork View" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="3" GridPane.valignment="TOP">
+                              <GridPane.margin>
+                                  <Insets top="5.0" />
+                              </GridPane.margin>
+                              <font>
+                                  <Font size="14.0" />
+                              </font>
+                          </Label>
+                          <TreeView fx:id="forkTreeView" prefHeight="191.0" prefWidth="262.0" GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.rowSpan="2">
+                              <GridPane.margin>
+                                  <Insets bottom="-30.0" top="30.0" />
+                              </GridPane.margin>
+                          </TreeView>
                           <Label fx:id="pathTransformSetText" text="Choose a path transformation" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
                               <GridPane.margin>
                                   <Insets top="10.0" />
@@ -222,7 +241,7 @@
                                   <Font size="18" />
                               </font>
                           </Button>
-                          <Label fx:id="generalTextLabel" text="General" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="5" GridPane.valignment="TOP">
+                          <Label fx:id="generalTextLabel" text="General" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="6" GridPane.valignment="BOTTOM">
                               <GridPane.margin>
                                   <Insets />
                               </GridPane.margin>
@@ -230,25 +249,25 @@
                                   <Font size="24.0" />
                               </font>
                           </Label>
-                          <Button fx:id="undoButton" alignment="CENTER" mnemonicParsing="false" text="Undo" GridPane.halignment="RIGHT" GridPane.rowIndex="5" GridPane.valignment="CENTER">
+                          <Button fx:id="undoButton" alignment="CENTER" mnemonicParsing="false" text="Undo" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="7" GridPane.valignment="TOP">
                               <GridPane.margin>
-                                  <Insets right="15.0" top="10.0" />
+                                  <Insets />
                               </GridPane.margin>
                               <padding>
                                   <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
                               </padding>
                           </Button>
-                          <Button fx:id="redoButton" alignment="CENTER" mnemonicParsing="false" text="Redo" GridPane.columnIndex="1" GridPane.rowIndex="5">
+                          <Button fx:id="redoButton" alignment="CENTER" mnemonicParsing="false" text="Redo" GridPane.columnIndex="1" GridPane.halignment="LEFT" GridPane.rowIndex="7" GridPane.valignment="TOP">
                               <GridPane.margin>
-                                  <Insets left="15.0" top="10.0" />
+                                  <Insets left="50.0" />
                               </GridPane.margin>
                               <padding>
                                   <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
                               </padding>
                           </Button>
-                          <Button fx:id="clearButton" alignment="CENTER" mnemonicParsing="false" text="Clear Path" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="5" GridPane.valignment="CENTER">
+                          <Button fx:id="clearButton" alignment="CENTER" mnemonicParsing="false" text="Clear Path" GridPane.halignment="RIGHT" GridPane.rowIndex="7" GridPane.valignment="TOP">
                               <GridPane.margin>
-                                  <Insets top="115.0" />
+                                  <Insets right="50.0" />
                               </GridPane.margin>
                               <padding>
                                   <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
