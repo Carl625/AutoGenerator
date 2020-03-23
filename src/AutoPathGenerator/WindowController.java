@@ -1,6 +1,9 @@
 package AutoPathGenerator;
 
 import Resources.Vector2D;
+import javafx.beans.InvalidationListener;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
@@ -14,9 +17,8 @@ import javafx.scene.shape.Polygon;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class WindowController {
 
@@ -73,7 +75,7 @@ public class WindowController {
     private String pointType;
 
     public Label forkViewText;
-    public TreeView forkTreeView;
+    public TreeView<String> forkTreeView;
 
     // transformations
     public Label pathTransformSetText;
@@ -214,19 +216,6 @@ public class WindowController {
         pathComponentSnapDropdown.getSelectionModel().select(0);
         pathComponentSnapDropdown.setOnAction(event -> specListener.pathComponentSnapChanged());
 
-        //point design
-        drawPointCheckBox.setSelected(false);
-        drawPointCheckBox.setOnAction(event -> specListener.drawPointChanged());
-        drawPoint = drawPointCheckBox.isSelected();
-
-        pointColorPicker.setValue(Color.RED);
-        pointColorPicker.setOnAction(event -> specListener.pointColorChanged());
-        currentPointColor = pointColorPicker.getValue();
-
-        drawRobotCheckBox.setSelected(false);
-        drawRobotCheckBox.setOnAction(event -> specListener.drawRobotChanged());
-        drawRobot = drawPointCheckBox.isSelected();
-
         //path editing
         pathTypeDropdown.getItems().clear();
         pathTypeDropdown.getItems().add("Go To Position");
@@ -235,16 +224,6 @@ public class WindowController {
         pathTypeDropdown.setOnAction(event -> specListener.pathTypeChanged());
         pathTypeDropdown.setDisable(true);
         pathType = pathTypeDropdown.getItems().get(0);
-
-        //point editing
-        pointTypeDropdown.getItems().clear();
-        pointTypeDropdown.getItems().add("Regular");
-        pointTypeDropdown.getItems().add("Fork - Start"); // TODO: add another textfield that either appears or becomes enabled when this is selected to specify what variable it should depend on? Work it out dude
-        pointTypeDropdown.getItems().add("Fork - End");
-        pointTypeDropdown.getSelectionModel().select(0);
-        pointTypeDropdown.setOnAction(event -> specListener.pointTypeChanged());
-        pointTypeDropdown.setDisable(true);
-        pointType = pointTypeDropdown.getItems().get(0);
 
         //path transforms
         pathTransformDropdown.getItems().clear();
@@ -258,9 +237,6 @@ public class WindowController {
         pivotTranslateXField.textProperty().addListener((o, ov, nv) -> specListener.pivotPosChanged());
         pivotTranslateYField.textProperty().addListener((o, ov, nv) -> specListener.pivotPosChanged());
         rotateReflectAngleField.textProperty().addListener((o, ov, nv) -> specListener.rotationAngleChanged());
-//        pivotXField.setOnAction(event -> pivotPosChanged());
-//        pivotYField.setOnAction(event -> pivotPosChanged());
-//        rotateAngleField.setOnAction(event -> rotationAngleChanged());
         transformVector = new Vector2D(0, 0);
         transformAngle = 0;
 
@@ -273,6 +249,38 @@ public class WindowController {
     }
 
     private void initPointDef() {
+
+        //point design
+        drawPointCheckBox.setSelected(false);
+        drawPointCheckBox.setOnAction(event -> specListener.drawPointChanged());
+        drawPoint = drawPointCheckBox.isSelected();
+
+        pointColorPicker.setValue(Color.RED);
+        pointColorPicker.setOnAction(event -> specListener.pointColorChanged());
+        currentPointColor = pointColorPicker.getValue();
+
+        drawRobotCheckBox.setSelected(false);
+        drawRobotCheckBox.setOnAction(event -> specListener.drawRobotChanged());
+        drawRobot = drawPointCheckBox.isSelected();
+
+        //point editing
+        pointTypeDropdown.getItems().clear();
+        pointTypeDropdown.getItems().add("Regular");
+        pointTypeDropdown.getItems().add("Fork - Start"); // TODO: add another textfield that either appears or becomes enabled when this is selected to specify what variable it should depend on? Work it out dude
+        pointTypeDropdown.getItems().add("Fork - End");
+        pointTypeDropdown.getSelectionModel().select(0);
+        pointTypeDropdown.setOnAction(event -> specListener.pointTypeChanged());
+        pointTypeDropdown.setDisable(true);
+        pointType = pointTypeDropdown.getItems().get(0);
+
+        forkTreeView.setEditable(false);
+        forkTreeView.setShowRoot(false);
+
+        TreeItem<String> root = WindowController.treeViewTester(1);
+        forkTreeView.setRoot(root);
+        forkTreeView.getSelectionModel().selectedItemProperty().addListener(selection -> specListener.branchSelected());
+
+        //for (int )
     }
 
     private void initAutoInit() {
@@ -440,6 +448,30 @@ public class WindowController {
 
                 pointType = pointTypeDropdown.getItems().get(pointTypeDropdown.getSelectionModel().getSelectedIndex());
                 display.setPathEditVisible(true);
+            }
+        }
+
+        private void branchSelected() {
+
+            int newlySelected = forkTreeView.getSelectionModel().selectedIndexProperty().get();
+
+            if (newlySelected != -1) {
+
+                //System.out.println(newlySelected + ": " + forkTreeView.getTreeItem(newlySelected));
+                //System.out.println("Level: " + forkTreeView.getTreeItemLevel(forkTreeView.getTreeItem(newlySelected)));
+
+                int level = forkTreeView.getTreeItemLevel(forkTreeView.getTreeItem(newlySelected)) - 1;
+                TreeItem<String> selectedItem = (TreeItem<String>) forkTreeView.getSelectionModel().getSelectedItem();
+
+                int rowID = getRowID(selectedItem, level);
+
+                for (int i = 0; i < 23; i++) {
+
+                    TreeItem t = getItem(forkTreeView.getRoot(), i);
+                    System.out.println(t.getValue());
+                }
+
+                //System.out.println("Row ID: " + (rowSpaceBefore + level));
             }
         }
 
@@ -689,6 +721,161 @@ public class WindowController {
 
         component.setVisible(show);
         component.managedProperty().bind(component.visibleProperty());
+    }
+
+    public ArrayList<TreeItem> obsToArrayList(ObservableList<TreeItem> obsList) {
+
+        ArrayList<TreeItem> arrList = new ArrayList<TreeItem>();
+
+        for (int t = 0; t < obsList.size(); t++) {
+
+            arrList.add(obsList.get(t));
+        }
+
+        return arrList;
+    }
+
+    public int getRowSpaceExpanded(TreeItem branch) {
+
+        int rowSpace = 1;
+
+        if (branch.isExpanded()) {
+
+            for (int t = 0; t < branch.getChildren().size(); t++) {
+
+                TreeItem item = (TreeItem) branch.getChildren().get(t);
+                rowSpace += getRowSpaceExpanded(item);
+            }
+        }
+
+        return rowSpace;
+    }
+
+    public int getRowSpace(TreeItem branch) {
+
+        int rowSpace = 1;
+
+        for (int t = 0; t < branch.getChildren().size(); t++) {
+
+            TreeItem item = (TreeItem) branch.getChildren().get(t);
+            rowSpace += getRowSpace(item);
+        }
+
+        return rowSpace;
+    }
+
+    public TreeItem getParent(TreeItem branch, int level) {
+
+        TreeItem parent = null;
+
+        if (level > 1) {
+
+            parent = getParent(branch.getParent(), level - 1);
+        } else if (level == 1) {
+
+            parent = branch.getParent();
+        } else if (level == 0) {
+
+            parent = branch;
+        }
+
+        return parent;
+    }
+
+    public ArrayList<TreeItem> getChildren(TreeItem root, int level) {
+
+        ArrayList<TreeItem> children = new ArrayList<TreeItem>();
+
+        if (level > 0) {
+
+            for (int c = 0; c < root.getChildren().size(); c++) {
+
+                children.addAll(getChildren((TreeItem) root.getChildren().get(c), level - 1));
+            }
+        } else if (level == 0) {
+
+            children.addAll(obsToArrayList(root.getChildren()));
+        }
+
+        return children;
+    }
+
+    public TreeItem getChild(TreeItem branch, ArrayList<Integer> position) {
+
+        position = new ArrayList<>(position);
+
+        if (position.size() > 0 && branch.getChildren().size() > position.get(0)) {
+
+            if (position.size() > 1) {
+
+                TreeItem newBranch = (TreeItem) branch.getChildren().get(position.get(0));
+                position.remove(0);
+
+                return getChild(newBranch, position);
+            } else {
+
+                return (TreeItem) branch.getChildren().get(position.get(0));
+            }
+        }
+
+        return null;
+    }
+
+    public int getRowID(TreeItem element, int level) {
+
+        int rowSpaceBefore = 0;
+
+        for (int l = 0; l <= level; l++) {
+
+            TreeItem parent = getParent(element, l);
+            TreeItem sibling = parent.previousSibling();
+
+            while (sibling != null) {
+
+                rowSpaceBefore += getRowSpace(sibling);
+                sibling = sibling.previousSibling();
+            }
+        }
+
+        return (rowSpaceBefore + level);
+    }
+
+    public int getTreeDepth(TreeItem root) {
+
+        int lastLevel = 0;
+        ArrayList<TreeItem> items = getChildren(root, lastLevel);
+
+        while (items.size() != 0) {
+
+            lastLevel++;
+            items = getChildren(root, lastLevel);
+        }
+
+        return lastLevel;
+    }
+
+    public TreeItem getItem(TreeItem root, int absoluteRowIndex) {
+
+        TreeItem item = null;
+
+        int maxLevel = getTreeDepth(root);
+
+        for (int currentLevel = 0; currentLevel <= maxLevel && item == null; currentLevel++) {
+
+            ArrayList<TreeItem> items = getChildren(root, currentLevel);
+
+            for (int t = 0; t < items.size() && item == null; t++) {
+
+                TreeItem currentItem = items.get(t);
+
+                if (getRowID(currentItem, currentLevel) == absoluteRowIndex) {
+
+                    item = currentItem;
+                }
+            }
+        }
+
+        return item;
     }
 
     /*---------- Data Manipulation/Internal Processing ----------*/
@@ -1775,6 +1962,77 @@ public class WindowController {
             Vector2D currentPoint = reflectPoint(pathPoints.get(p), 90);
             System.out.println(p + ": " + currentPoint);
         }
+    }
+
+    /**
+     * Creates different tree view structures to test the selection index algorithm
+     * @param test  An identifier for which preset tree structure is to be returned
+     * @return  A preset TreeItem structure
+     */
+    private static TreeItem<String> treeViewTester(int test) {
+
+        TreeItem<String> root = new TreeItem<String>();
+        root.setExpanded(true);
+
+        switch (test) {
+            case 0:
+
+                TreeItem<String> fork1 = new TreeItem<String>("First Fork");
+                TreeItem<String> route11 = new TreeItem<String>("Sub Path 11");
+                TreeItem<String> route12 = new TreeItem<String>("Sub Path 12");
+                TreeItem<String> route13 = new TreeItem<String>("Sub Path 13");
+                fork1.getChildren().add(route11);
+                fork1.getChildren().add(route12);
+                fork1.getChildren().add(route13);
+
+                TreeItem<String> fork2 = new TreeItem<String>("Second Fork");
+                TreeItem<String> route21 = new TreeItem<String>("Sub Path 21");
+                TreeItem<String> route22 = new TreeItem<String>("Sub Path 22");
+                TreeItem<String> route23 = new TreeItem<String>("Sub Path 23");
+                fork2.getChildren().add(route21);
+                fork2.getChildren().add(route22);
+                fork2.getChildren().add(route23);
+
+                // finalize the structure and add it to the dummy root
+                root.getChildren().add(fork1);
+                root.getChildren().add(fork2);
+                break;
+            case 1:
+
+                TreeItem<String> node1 = new TreeItem<String>("Node 1");
+                    TreeItem<String> node11 = new TreeItem<String>("Node 11");
+                    node1.getChildren().add(node11);
+                        node11.getChildren().add(new TreeItem<String>("Node 111"));
+                        node11.getChildren().add(new TreeItem<String>("Node 112"));
+                        node11.getChildren().add(new TreeItem<String>("Node 113"));
+                        node11.getChildren().add(new TreeItem<String>("Node 114"));
+                        node11.getChildren().add(new TreeItem<String>("Node 115"));
+                    node1.getChildren().add(new TreeItem<String>("Node 12"));
+                    node1.getChildren().add(new TreeItem<String>("Node 13"));
+                    node1.getChildren().add(new TreeItem<String>("Node 14"));
+                    node1.getChildren().add(new TreeItem<String>("Node 15"));
+
+                TreeItem<String> node2 = new TreeItem<String>("Node 2");
+                    node2.getChildren().add(new TreeItem<String>("Node 21"));
+                    node2.getChildren().add(new TreeItem<String>("Node 22"));
+                    node2.getChildren().add(new TreeItem<String>("Node 23"));
+                    node2.getChildren().add(new TreeItem<String>("Node 24"));
+                    node2.getChildren().add(new TreeItem<String>("Node 25"));
+
+                TreeItem<String> node3 = new TreeItem<String>("Node 3");
+                    node3.getChildren().add(new TreeItem<String>("Node 31"));
+                    node3.getChildren().add(new TreeItem<String>("Node 32"));
+                    node3.getChildren().add(new TreeItem<String>("Node 33"));
+                    node3.getChildren().add(new TreeItem<String>("Node 34"));
+                    node3.getChildren().add(new TreeItem<String>("Node 35"));
+
+                    root.getChildren().add(node1);
+                    root.getChildren().add(node2);
+                    root.getChildren().add(node3);
+                break;
+        }
+
+        return root;
     }
 
     public static void main(String[] args) {
