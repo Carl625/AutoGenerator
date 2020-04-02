@@ -1,11 +1,12 @@
 package AutoPathGenerator;
 
 import Resources.Vector2D;
-import javafx.beans.InvalidationListener;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
@@ -14,11 +15,14 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Polygon;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class WindowController {
 
@@ -66,16 +70,61 @@ public class WindowController {
     public Label editSelectCompLabel;
     public Label editSelectPointLabel;
 
-    public Label pathTypeSetText;
-    public ChoiceBox<String> pathTypeDropdown;
-    private String pathType;
+    public enum pathTypes {
 
-    public Label pointTypeSetText;
-    public ChoiceBox<String> pointTypeDropdown;
-    private String pointType;
+        goToPosition("Go To Position"),
+        purePursuit("Pure Pursuit");
+
+        private String displayName;
+
+        pathTypes(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String displayName() {
+            return displayName;
+        }
+
+        public String toString() {
+            return displayName;
+        }
+    }
+
+    public Label pathTypeSetText;
+    public ChoiceBox<pathTypes> pathTypeDropdown;
+    private int currentlySelectedPath;
+
+    public enum pointTypes {
+
+        Regular("Regular"),
+        Fork_Start("Fork - Start"),
+        Fork_End("Fork - End");
+
+        private String displayName;
+
+        pointTypes(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String displayName() {
+            return displayName;
+        }
+
+        public String toString() {
+            return displayName;
+        }
+    }
+
+    public Label forkedPathOperationsText;
+    public Button modifyForkBtn;
+    public Button deleteForkBtn;
+    private int currentlySelectedPoint;
+
+    private ForkDialog createForkDialog;
 
     public Label forkViewText;
     public TreeView<String> forkTreeView;
+    private int selectedItemRowID;
 
     // transformations
     public Label pathTransformSetText;
@@ -127,6 +176,7 @@ public class WindowController {
     private static final double pixelsPerInch = (670.0 / fieldLengthInch); // 700x700 pixel image of a 12ft x 12ft field, 670 of the pixels actually represent the length of the field
     private static final Polygon fieldBounds = new Polygon(fieldLengthInch / -2.0, fieldLengthInch / -2.0, fieldLengthInch / -2.0, fieldLengthInch / 2.0, fieldLengthInch / 2.0, fieldLengthInch / 2.0, fieldLengthInch / 2.0, fieldLengthInch / -2.0);
 
+    //Design
     private ArrayList<Vector2D> orderedPathVectors;
     private ArrayList<Polygon> pathBounds;
     private ArrayList<Color> pathColors;
@@ -135,16 +185,18 @@ public class WindowController {
     private Vector2D initialPos;
     private Vector2D prevMouseClick;
 
+    //Editing
+
+    private HashMap<Integer, pathTypes> pathTypeAssociations;
+    private HashMap<Integer, pointTypes> pointTypeAssociations;
+    private ArrayList<ArrayList<ArrayList<Vector2D>>> forkedPaths; // 1st arraylist is a list of forked paths, 2nd arraylist is a set of possible paths in between a fork start and fork end, the third is the actual possible path
+
     public void initialize() {
 
         //init internal variables
         display = new WindowDrawer();
         specListener = new autoSpecListener();
         initListener = new autoInitListener();
-        orderedPathVectors = new ArrayList<Vector2D>();
-        pathBounds = new ArrayList<Polygon>();
-        pathColors = new ArrayList<Color>();
-        pointColors = new ArrayList<Color>();
 
         // init graphics
         initTabs();
@@ -160,6 +212,7 @@ public class WindowController {
 
     private void initPathSpec() {
 
+        // Graphics init
         try {
             FileInputStream f = new FileInputStream("../AutoGenerator/src/Resources/Images/topviewfield.png");
             field = new Image(f);
@@ -174,7 +227,20 @@ public class WindowController {
         robotGraphics = robotDisplay.getGraphicsContext2D(); //TODO: get one image from solidworks that is also top down but with the intake and draggers retracted and switc between then as deployIntake() is called
         resetRobotDisplay();
 
+        // Data init
+        orderedPathVectors = new ArrayList<Vector2D>();
+        pathBounds = new ArrayList<Polygon>();
+        pathColors = new ArrayList<Color>();
+        pointColors = new ArrayList<Color>();
+
+        pathTypeAssociations = new HashMap<Integer, pathTypes>();
+        pointTypeAssociations = new HashMap<Integer, pointTypes>();
+        forkedPaths = new ArrayList<ArrayList<ArrayList<Vector2D>>>();
+
         initialPos = new Vector2D(63, -36);
+        pointTypeAssociations.put(0, pointTypes.Regular); // this is for the initial point
+
+        // Graphics init pt.2, need to draw the initial point
         pointColors.add(currentPointColor);
         redrawPoints();
 
@@ -218,12 +284,12 @@ public class WindowController {
 
         //path editing
         pathTypeDropdown.getItems().clear();
-        pathTypeDropdown.getItems().add("Go To Position");
-        pathTypeDropdown.getItems().add("Pure Pursuit");
+        pathTypeDropdown.getItems().addAll(pathTypes.values());
         pathTypeDropdown.getSelectionModel().select(0);
         pathTypeDropdown.setOnAction(event -> specListener.pathTypeChanged());
         pathTypeDropdown.setDisable(true);
-        pathType = pathTypeDropdown.getItems().get(0);
+        
+        currentlySelectedPath = -1;
 
         //path transforms
         pathTransformDropdown.getItems().clear();
@@ -264,23 +330,23 @@ public class WindowController {
         drawRobot = drawPointCheckBox.isSelected();
 
         //point editing
-        pointTypeDropdown.getItems().clear();
-        pointTypeDropdown.getItems().add("Regular");
-        pointTypeDropdown.getItems().add("Fork - Start"); // TODO: add another textfield that either appears or becomes enabled when this is selected to specify what variable it should depend on? Work it out dude
-        pointTypeDropdown.getItems().add("Fork - End");
-        pointTypeDropdown.getSelectionModel().select(0);
-        pointTypeDropdown.setOnAction(event -> specListener.pointTypeChanged());
-        pointTypeDropdown.setDisable(true);
-        pointType = pointTypeDropdown.getItems().get(0);
+//        pointTypeDropdown.getItems().clear();
+//        pointTypeDropdown.getItems().addAll(pointTypes.values()); // TODO: add another textfield that either appears or becomes enabled when this is selected to specify what variable it should depend on? Work it out dude
+//        pointTypeDropdown.getSelectionModel().select(0);
+//        pointTypeDropdown.setOnAction(event -> specListener.pointTypeChanged());
+//        pointTypeDropdown.setDisable(true);
+        modifyForkBtn.setOnAction(event -> specListener.modifyForks());
+        deleteForkBtn.setOnAction(event -> specListener.deleteFork());
+        
+        currentlySelectedPoint = -1;
 
         forkTreeView.setEditable(false);
         forkTreeView.setShowRoot(false);
 
-        TreeItem<String> root = WindowController.treeViewTester(1);
+        TreeItem<String> root = new TreeItem<String>(); //WindowController.treeViewTester(1);
         forkTreeView.setRoot(root);
         forkTreeView.getSelectionModel().selectedItemProperty().addListener(selection -> specListener.branchSelected());
-
-        //for (int )
+        selectedItemRowID = -1;
     }
 
     private void initAutoInit() {
@@ -434,21 +500,50 @@ public class WindowController {
 
             int newlySelected = pathTypeDropdown.getSelectionModel().getSelectedIndex();
 
-            if (newlySelected != -1) {
+            if (newlySelected != -1 && currentlySelectedPath != -1) {
 
-                pathType = pathTypeDropdown.getItems().get(pathTypeDropdown.getSelectionModel().getSelectedIndex());
+                pathTypes pathType = pathTypeDropdown.getItems().get(pathTypeDropdown.getSelectionModel().getSelectedIndex());
+                pathTypeAssociations.put(currentlySelectedPath, pathType);
             }
         }
 
-        private void pointTypeChanged() {
+//        private void pointTypeChanged() {
+//
+//            int newlySelected = pointTypeDropdown.getSelectionModel().getSelectedIndex();
+//
+//            if (newlySelected != -1 && currentlySelectedPoint != -1) {
+//
+//                pointTypes pointType = pointTypeDropdown.getItems().get(pointTypeDropdown.getSelectionModel().getSelectedIndex());
+//                pointTypeAssociations.put(currentlySelectedPoint, pointType);
+//
+//                display.setPathEditVisible(true);
+//            }
+//        }
 
-            int newlySelected = pointTypeDropdown.getSelectionModel().getSelectedIndex();
+        private void modifyForks() {
 
-            if (newlySelected != -1) {
+            int currentlySelectedForkIndex = selectedItemRowID;
 
-                pointType = pointTypeDropdown.getItems().get(pointTypeDropdown.getSelectionModel().getSelectedIndex());
-                display.setPathEditVisible(true);
+            if (selectedItemRowID != -1) { // modify if a fork is selected
+
+
+            } else { // create if no fork is selected
+
+                try {
+
+                    openForkCreateDialog(ForkDialog.dialogType.createFork);
+                } catch (IOException e) {
+
+                    e.printStackTrace();
+                }
             }
+
+            display.setPathEditVisible(true);
+        }
+
+        private void deleteFork() {
+
+
         }
 
         private void branchSelected() {
@@ -457,21 +552,18 @@ public class WindowController {
 
             if (newlySelected != -1) {
 
-                //System.out.println(newlySelected + ": " + forkTreeView.getTreeItem(newlySelected));
-                //System.out.println("Level: " + forkTreeView.getTreeItemLevel(forkTreeView.getTreeItem(newlySelected)));
-
                 int level = forkTreeView.getTreeItemLevel(forkTreeView.getTreeItem(newlySelected)) - 1;
                 TreeItem<String> selectedItem = (TreeItem<String>) forkTreeView.getSelectionModel().getSelectedItem();
 
                 int rowID = getRowID(selectedItem, level);
+                selectedItemRowID = rowID;
+                modifyForkBtn.setText("Modify Fork");
 
-                for (int i = 0; i < 23; i++) {
+                System.out.println("Selected Row: " + rowID);
+            } else {
 
-                    TreeItem t = getItem(forkTreeView.getRoot(), i);
-                    System.out.println(t.getValue());
-                }
-
-                //System.out.println("Row ID: " + (rowSpaceBefore + level));
+                selectedItemRowID = -1;
+                modifyForkBtn.setText("Create Fork");
             }
         }
 
@@ -725,16 +817,14 @@ public class WindowController {
 
     public ArrayList<TreeItem> obsToArrayList(ObservableList<TreeItem> obsList) {
 
-        ArrayList<TreeItem> arrList = new ArrayList<TreeItem>();
-
-        for (int t = 0; t < obsList.size(); t++) {
-
-            arrList.add(obsList.get(t));
-        }
-
-        return arrList;
+        return new ArrayList<TreeItem>(obsList);
     }
 
+    /**
+     * Returns the row space an item takes up in it's current state
+     * @param branch    The item to be analyzed
+     * @return          The number of rows the item currently takes up
+     */
     public int getRowSpaceExpanded(TreeItem branch) {
 
         int rowSpace = 1;
@@ -751,6 +841,11 @@ public class WindowController {
         return rowSpace;
     }
 
+    /**
+     * Returns the absolute row space an item would take up in it's completely expanded state
+     * @param branch    The item be analyzed
+     * @return          The number of rows it would take up being completely expanded
+     */
     public int getRowSpace(TreeItem branch) {
 
         int rowSpace = 1;
@@ -764,6 +859,12 @@ public class WindowController {
         return rowSpace;
     }
 
+    /**
+     * Returns the nth parent of some item
+     * @param branch    The item the parent is related to
+     * @param level     The negative level of the parent relative to the reference branch
+     * @return          The parent item
+     */
     public TreeItem getParent(TreeItem branch, int level) {
 
         TreeItem parent = null;
@@ -782,6 +883,12 @@ public class WindowController {
         return parent;
     }
 
+    /**
+     * Returns all the children of a given level relative to the root
+     * @param root  The tree structure to be analyzed
+     * @param level The level of the items returned
+     * @return      An arraylist of items all of a given level relative to the root
+     */
     public ArrayList<TreeItem> getChildren(TreeItem root, int level) {
 
         ArrayList<TreeItem> children = new ArrayList<TreeItem>();
@@ -800,6 +907,12 @@ public class WindowController {
         return children;
     }
 
+    /**
+     * Given a tree structure and a position given as the index of the nodes at each tree level, this method returns the item at that location
+     * @param branch    The tree structure to navigate
+     * @param position  The position of the item as the index in the children lists of each previous node: Ex. <0, 1, 1> gives the 2nd child of the 2nd child of the 1st item, <1, 0, 2> gives the 3rd child of the 1st child of the 2nd item
+     * @return          The Tree Item at the specified position, null if the position does not exist inside the structure or if the position does not contain actual data
+     */
     public TreeItem getChild(TreeItem branch, ArrayList<Integer> position) {
 
         position = new ArrayList<>(position);
@@ -821,6 +934,12 @@ public class WindowController {
         return null;
     }
 
+    /**
+     * Regardless of the full structure, given the level of the element in the appropriate sub-structure reference frame, as well as the item and it's relations, this method returns the absolute row ID of the element, or rather, the row number in the fully expanded state of the relative structure
+     * @param element   The Tree Item for which the row ID is needed
+     * @param level     The relative tree depth of the item
+     * @return          The absolute row number, or row ID of the item
+     */
     public int getRowID(TreeItem element, int level) {
 
         int rowSpaceBefore = 0;
@@ -840,7 +959,12 @@ public class WindowController {
         return (rowSpaceBefore + level);
     }
 
-    public int getTreeDepth(TreeItem root) {
+    /**
+     * Automatically analyzes the tree structure and determines the highest level
+     * @param root  The tree structure to analyze
+     * @return      The maximum depth of the tree
+     */
+    public int getTreeHeight(TreeItem root) {
 
         int lastLevel = 0;
         ArrayList<TreeItem> items = getChildren(root, lastLevel);
@@ -854,28 +978,93 @@ public class WindowController {
         return lastLevel;
     }
 
+    /**
+     * Given a tree structure and a rowID, the method will return the item that corresponds to the row number passed in when the structure is in a completely expanded state
+     * @param root              The tree structure to navigate
+     * @param absoluteRowIndex  The expanded row number
+     * @return                  Returns a TreeItem, null if root is null, absoluteRowIndex is less than 0, or if the number of items in the structure is less than the row number
+     */
     public TreeItem getItem(TreeItem root, int absoluteRowIndex) {
 
         TreeItem item = null;
 
-        int maxLevel = getTreeDepth(root);
+        if (root != null && absoluteRowIndex >= 0) {
 
-        for (int currentLevel = 0; currentLevel <= maxLevel && item == null; currentLevel++) {
+            // Algorithm #1: Ridiculously hard to manage data
+//            final int baseLength = getChildren(root, 0).size();
+//
+//            ArrayList<Integer> treePosition = new ArrayList<Integer>();
+//            treePosition.add(0);
+//
+//            int rowSpaceBefore = 0;
+//            int currentLevel = 0;
+//
+//            while (absoluteRowIndex != rowSpaceBefore && treePosition.get(0) < baseLength) {
+//
+//                TreeItem currentItem = getChild(root, treePosition);
+//                int addedRowSpace = getRowSpace(currentItem);
+//
+//                if (addedRowSpace > absoluteRowIndex) {
+//
+//                    int childrenCount = currentItem.getChildren().size();
+//
+//                    if (childrenCount > 0) {
+//
+//                        currentLevel++;
+//                        treePosition.add(currentLevel, 0);
+//                    } else {
+//
+//                        treePosition.remove(currentLevel);
+//                        currentLevel--;
+//                        treePosition.set(currentLevel, treePosition.get(currentLevel) + 1);
+//                    }
+//                } else if (addedRowSpace < absoluteRowIndex) {
+//
+//                    treePosition.set(currentLevel, treePosition.get(currentLevel) + 1);
+//                }
+//
+//                while (treePosition.get(currentLevel) >= currentItem.getParent().getChildren().size()) {
+//
+//
+//                    treePosition.remove(currentLevel);
+//                    currentLevel--;
+//                    treePosition.set(currentLevel, treePosition.get(currentLevel) + 1);
+//                }
+//            }
 
-            ArrayList<TreeItem> items = getChildren(root, currentLevel);
+            // Algorithm #2, is this inefficient? My original algorithm is probably faster but far more complex
+            int height = getTreeHeight(root);
 
-            for (int t = 0; t < items.size() && item == null; t++) {
+            for (int currentLevel = 0; currentLevel <= height && item == null; currentLevel++) {
 
-                TreeItem currentItem = items.get(t);
+                ArrayList<TreeItem> items = getChildren(root, currentLevel);
 
-                if (getRowID(currentItem, currentLevel) == absoluteRowIndex) {
+                for (int t = 0; t < items.size() && item == null; t++) {
 
-                    item = currentItem;
+                    TreeItem currentItem = items.get(t);
+
+                    if (getRowID(currentItem, currentLevel) == absoluteRowIndex) {
+
+                        item = currentItem;
+                    }
                 }
             }
         }
 
         return item;
+    }
+
+    void openForkCreateDialog(ForkDialog.dialogType type) throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("ForkDialog.fxml"));
+        Parent parent = fxmlLoader.load();
+        ForkDialog dialogController = fxmlLoader.<ForkDialog>getController();
+        dialogController.initialize(type);
+
+        Scene scene = new Scene(parent, 300, 200);
+        Stage stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setScene(scene);
+        stage.showAndWait();
     }
 
     /*---------- Data Manipulation/Internal Processing ----------*/
@@ -1346,36 +1535,86 @@ public class WindowController {
 
                     pointColors.add(currentPointColor);
                     //System.out.println("Path Length: " + orderedPathVectors.size());
+
+                    //add the paths and points to have types modified later
+                    pathTypeAssociations.put(orderedPathVectors.size() - 1, pathTypes.goToPosition);
+                    pointTypeAssociations.put(orderedPathVectors.size(), pointTypes.Regular);
+
                     prevMouseClick = null;
                     break;
                 case "Edit Components":
 
+                    // what did I press again?
                     int[] pathComponents = getPathCompInRadiusInch(mouseClick, 2);
                     //drawPathBounds();
                     System.out.println("Path Components Clicked: " + Arrays.toString(pathComponents));
-
-                    if (pathComponents.length != 0) {
-
-                        editSelectCompLabel.setText("Selected Component: " + pathComponents[pathComponents.length - 1]);
-                        pathTypeDropdown.setDisable(false);
-                    } else {
-
-                        pathTypeDropdown.setDisable(true);
-                    }
 
                     int[] pathPoints = getPointInRadiusInch(mouseClick, 2);
                     System.out.println("Path Points Clicked: " + Arrays.toString(pathPoints));
 
                     if (pathPoints.length != 0) {
 
-                        editSelectPointLabel.setText("Selected Point: " + pathPoints[pathPoints.length - 1]);
-                        pointTypeDropdown.setDisable(false);
+                        pathComponents = new int[0];
+                    }
+
+                    // updating the displays
+                    if (pathComponents.length != 0) {
+
+                        currentlySelectedPath = pathComponents[pathComponents.length - 1];
+                        editSelectCompLabel.setText("Selected Component: " + currentlySelectedPath);
+                        pathTypeDropdown.setDisable(false);
+
+                        pathTypes selectedPathType = pathTypeAssociations.get(currentlySelectedPath);
+                        pathTypeDropdown.getSelectionModel().select(selectedPathType);
                     } else {
 
-                        pointTypeDropdown.setDisable(true);
+                        currentlySelectedPath = -1;
+                        editSelectCompLabel.setText("Selected Component: NONE");
+                        pathTypeDropdown.setDisable(true);
+                    }
+
+                    if (pathPoints.length != 0) {
+
+                        currentlySelectedPoint = pathPoints[pathPoints.length - 1];
+                        editSelectPointLabel.setText("Selected Point: " + currentlySelectedPoint);
+
+                        pointTypes selectedPointType = pointTypeAssociations.get(currentlySelectedPoint);
+                        //pointTypeDropdown.getSelectionModel().select(selectedPointType); // replace with a label that states the selected point type
+                    } else {
+
+                        currentlySelectedPoint = -1;
+                        editSelectPointLabel.setText("Selected Point: NONE");
                     }
 
                     prevMouseClick = null;
+
+                    // doing fun stuff with editing the paths
+                    if (currentlySelectedPath != -1) {
+                        switch (pathTypeAssociations.get(currentlySelectedPath).displayName()) {
+                            case "Go To Position":
+
+                                break;
+                            case "Pure Pursuit":
+
+                                break;
+                        }
+                    }
+
+                    // doing fun stuff with editing points
+                    if (currentlySelectedPoint != -1) {
+                        switch (pointTypeAssociations.get(currentlySelectedPoint).displayName()) {
+                            case "Regular":
+
+                                break;
+                            case "Fork - Start":
+
+                                break;
+                            case "Fork - End":
+
+                                break;
+                        }
+                    }
+                    
                     break;
                 case "Rigid Transform":
 
@@ -1420,16 +1659,17 @@ public class WindowController {
     public void resetPathSpec() {
 
         resetField();
+
+        if (snapToGrid) {
+
+            display.drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
+        }
+
         redrawPath(pathColors.toArray(new Color[0]));
 
         if (drawPoint) {
 
             redrawPoints(pointColors.toArray(new Color[0]));
-        }
-
-        if (snapToGrid) {
-
-            display.drawGrid(fieldDisplay, 12, 12, Color.BLACK, new double[] {15, 15, 15, 15});
         }
     }
 
@@ -1835,10 +2075,11 @@ public class WindowController {
             //point
             setVisible(show, pointText);
             setVisible(show, editSelectPointLabel);
-            setVisible(show, pointTypeSetText);
-            setVisible(show, pointTypeDropdown);
+            setVisible(show, forkedPathOperationsText);
+            setVisible(show, modifyForkBtn);
+            setVisible(show, deleteForkBtn);
 
-            if (pointType.equals("Regular")) {
+            if (forkedPaths.size() == 0) {
 
                 show = false;
             }
@@ -1924,6 +2165,14 @@ public class WindowController {
 
             rotRefAngleText.setText("Reflection Line Angle");
             transformPathBtn.setText("Reflect Path");
+        }
+    }
+
+    class programConstructor {
+
+        public boolean outputPath(Path outputFile) {
+
+            return false; // This has to reflect whether the output proceeded correctly
         }
     }
 

@@ -161,12 +161,23 @@
                                   <Insets top="10.0" />
                               </GridPane.margin>
                           </Label>
-                          <ChoiceBox fx:id="pointTypeDropdown" prefWidth="150.0" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
-                              <GridPane.margin>
-                                  <Insets top="10.0" />
-                              </GridPane.margin>
-                          </ChoiceBox>
-                          <Label fx:id="pointTypeSetText" text="Set Selected Point Type" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
+                        <Button fx:id="modifyForkBtn" mnemonicParsing="false" text="Create Fork" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
+                           <GridPane.margin>
+                              <Insets top="40.0" />
+                           </GridPane.margin>
+                           <font>
+                              <Font size="14.0" />
+                           </font>
+                        </Button>
+                        <Button fx:id="deleteForkBtn" mnemonicParsing="false" text="Delete Fork" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="CENTER">
+                           <GridPane.margin>
+                              <Insets top="70.0" />
+                           </GridPane.margin>
+                           <font>
+                              <Font size="14.0" />
+                           </font>
+                        </Button>
+                          <Label fx:id="forkedPathOperationsText" text="Manage Forked Paths" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
                               <GridPane.margin>
                                   <Insets top="10.0" />
                               </GridPane.margin>
@@ -184,7 +195,7 @@
                           </Label>
                           <TreeView fx:id="forkTreeView" prefHeight="191.0" prefWidth="262.0" GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.rowSpan="2">
                               <GridPane.margin>
-                                  <Insets bottom="-30.0" top="30.0" />
+                                  <Insets bottom="-40.0" left="5.0" right="5.0" top="30.0" />
                               </GridPane.margin>
                           </TreeView>
                           <Label fx:id="pathTransformSetText" text="Choose a path transformation" GridPane.halignment="CENTER" GridPane.rowIndex="2" GridPane.valignment="TOP">
