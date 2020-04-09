@@ -522,11 +522,15 @@ public class WindowController {
 
         private void modifyForks() {
 
-            int currentlySelectedForkIndex = selectedItemRowID;
-
             if (selectedItemRowID != -1) { // modify if a fork is selected
 
+                try {
 
+                    openForkCreateDialog(ForkDialog.dialogType.modifyFork);
+                } catch (IOException e) {
+
+                    e.printStackTrace();
+                }
             } else { // create if no fork is selected
 
                 try {
@@ -543,7 +547,16 @@ public class WindowController {
 
         private void deleteFork() {
 
+            if (selectedItemRowID != -1) {
 
+                try {
+
+                    openForkCreateDialog(ForkDialog.dialogType.deleteFork);
+                } catch (IOException e) {
+
+                    e.printStackTrace();
+                }
+            }
         }
 
         private void branchSelected() {
@@ -1063,8 +1076,11 @@ public class WindowController {
         Scene scene = new Scene(parent, 300, 200);
         Stage stage = new Stage();
         stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setResizable(false);
         stage.setScene(scene);
-        stage.showAndWait();
+        stage.show();
+
+        Main.fixBounds(stage, parent);
     }
 
     /*---------- Data Manipulation/Internal Processing ----------*/

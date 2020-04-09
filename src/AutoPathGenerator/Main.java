@@ -19,6 +19,7 @@ public class Main extends Application {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("AutoGen.fxml"));
         Parent root = loader.load();
         Bounds rootBounds = root.getBoundsInLocal();
+        root.setStyle("-fx-base: rgba(60, 60, 60, 255);");
 
         //set up the data inside the controller
         WindowController mainController = loader.getController();
@@ -32,7 +33,7 @@ public class Main extends Application {
         fixBounds(primaryStage, root);
     }
 
-    private void fixBounds(Stage stage, Parent root) {
+    public static void fixBounds(Stage stage, Parent root) {
 
         Bounds rootBounds = root.getBoundsInLocal();
         Bounds prefBounds = getPrefBounds(root);
@@ -46,7 +47,7 @@ public class Main extends Application {
         stage.setMaxHeight(prefBounds.getHeight() + deltaH);
     }
 
-    private Bounds getPrefBounds(Node node) {
+    public static Bounds getPrefBounds(Node node) {
 
         double prefWidth ;
         double prefHeight ;

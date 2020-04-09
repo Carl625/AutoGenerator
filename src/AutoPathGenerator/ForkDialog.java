@@ -14,7 +14,7 @@ public class ForkDialog<T> extends Dialog<T> {
 
     private dialogType type;
 
-    public void initialize(dialogType type) {
+    public void initialize(dialogType type) { // TODO: remember to add the text field to specify what variable the fork is to depend on
 
         this.type = type;
 
@@ -29,6 +29,6 @@ public class ForkDialog<T> extends Dialog<T> {
 
     private void behaviorSetup() {
 
-        
+
     }
 }
