@@ -94,26 +94,26 @@ public class WindowController {
     public ChoiceBox<pathTypes> pathTypeDropdown;
     private int currentlySelectedPath;
 
-    public enum pointTypes {
-
-        Regular("Regular"),
-        Fork_Start("Fork - Start"),
-        Fork_End("Fork - End");
-
-        private String displayName;
-
-        pointTypes(String displayName) {
-            this.displayName = displayName;
-        }
-
-        public String displayName() {
-            return displayName;
-        }
-
-        public String toString() {
-            return displayName;
-        }
-    }
+//    public enum pointTypes {
+//
+//        Regular("Regular"),
+//        Fork_Start("Fork - Start"),
+//        Fork_End("Fork - End");
+//
+//        private String displayName;
+//
+//        pointTypes(String displayName) {
+//            this.displayName = displayName;
+//        }
+//
+//        public String displayName() {
+//            return displayName;
+//        }
+//
+//        public String toString() {
+//            return displayName;
+//        }
+//    }
 
     public Label forkedPathOperationsText;
     public Button modifyForkBtn;
@@ -186,9 +186,8 @@ public class WindowController {
     private Vector2D prevMouseClick;
 
     //Editing
-
     private HashMap<Integer, pathTypes> pathTypeAssociations;
-    private HashMap<Integer, pointTypes> pointTypeAssociations;
+    //private HashMap<Integer, pointTypes> pointTypeAssociations;
     private ArrayList<ArrayList<ArrayList<Vector2D>>> forkedPaths; // 1st arraylist is a list of forked paths, 2nd arraylist is a set of possible paths in between a fork start and fork end, the third is the actual possible path
 
     public void initialize() {
@@ -234,11 +233,11 @@ public class WindowController {
         pointColors = new ArrayList<Color>();
 
         pathTypeAssociations = new HashMap<Integer, pathTypes>();
-        pointTypeAssociations = new HashMap<Integer, pointTypes>();
+        //pointTypeAssociations = new HashMap<Integer, pointTypes>();
         forkedPaths = new ArrayList<ArrayList<ArrayList<Vector2D>>>();
 
         initialPos = new Vector2D(63, -36);
-        pointTypeAssociations.put(0, pointTypes.Regular); // this is for the initial point
+        //pointTypeAssociations.put(0, pointTypes.Regular); // this is for the initial point
 
         // Graphics init pt.2, need to draw the initial point
         pointColors.add(currentPointColor);
@@ -856,7 +855,7 @@ public class WindowController {
 
     /**
      * Returns the absolute row space an item would take up in it's completely expanded state
-     * @param branch    The item be analyzed
+     * @param branch    The item to be analyzed
      * @return          The number of rows it would take up being completely expanded
      */
     public int getRowSpace(TreeItem branch) {
@@ -875,22 +874,24 @@ public class WindowController {
     /**
      * Returns the nth parent of some item
      * @param branch    The item the parent is related to
-     * @param level     The negative level of the parent relative to the reference branch
+     * @param level     The negative level of the parent relative to the reference branch ex.(1) is 1 level closer to the root
      * @return          The parent item
      */
     public TreeItem getParent(TreeItem branch, int level) {
 
         TreeItem parent = null;
 
-        if (level > 1) {
+        if (branch != null) {
+            if (level > 1) {
 
-            parent = getParent(branch.getParent(), level - 1);
-        } else if (level == 1) {
+                parent = getParent(branch.getParent(), level - 1);
+            } else if (level == 1) {
 
-            parent = branch.getParent();
-        } else if (level == 0) {
+                parent = branch.getParent();
+            } else if (level == 0) {
 
-            parent = branch;
+                parent = branch;
+            }
         }
 
         return parent;
@@ -928,20 +929,19 @@ public class WindowController {
      */
     public TreeItem getChild(TreeItem branch, ArrayList<Integer> position) {
 
-        position = new ArrayList<>(position);
+        position = new ArrayList<Integer>(position);
 
         if (position.size() > 0 && branch.getChildren().size() > position.get(0)) {
 
+            TreeItem newBranch = (TreeItem) branch.getChildren().get(position.get(0));
+
             if (position.size() > 1) {
 
-                TreeItem newBranch = (TreeItem) branch.getChildren().get(position.get(0));
                 position.remove(0);
-
                 return getChild(newBranch, position);
-            } else {
-
-                return (TreeItem) branch.getChildren().get(position.get(0));
             }
+
+            return newBranch;
         }
 
         return null;
@@ -1273,7 +1273,7 @@ public class WindowController {
         Vector2D centerOffset = new Vector2D(xOffset, yOffset);
         pathComponent.sub(centerOffset);
 
-        ArrayList<Double> boundingBoxPoints = new ArrayList<>();
+        ArrayList<Double> boundingBoxPoints = new ArrayList<Double>();
         double angle = pathComponent.getTheta() - (Math.PI / 2.0);
 
         Vector2D refVector = new Vector2D(angle, boundSize, true); // this vector is equal to half the width of the vector and quite useful
@@ -1319,8 +1319,8 @@ public class WindowController {
      */
     public static ArrayList<Vector2D> generatePathPoints(Vector2D initialPosition, ArrayList<Vector2D> pathComponents) {
 
-        ArrayList<Vector2D> pathPoints = new ArrayList<>();
-        pathComponents = new ArrayList<>(pathComponents);
+        ArrayList<Vector2D> pathPoints = new ArrayList<Vector2D>();
+        pathComponents = new ArrayList<Vector2D>(pathComponents);
         Vector2D currentPoint = new Vector2D(initialPosition);
         pathPoints.add(new Vector2D(currentPoint));
 
@@ -1541,7 +1541,7 @@ public class WindowController {
                     pathBounds.add(generateVectorBounds(prevPos, orderedPathVectors.get(orderedPathVectors.size() - 1), 5));
                     pathColors.add(currentPathColor);
                     display.drawVectorField(fieldDisplay, prevPos, mouseClick, currentPathColor);
-                    //drawPathBounds();
+                    //display.drawPathBounds();
 
                     if (drawPoint) {
 
@@ -1554,7 +1554,7 @@ public class WindowController {
 
                     //add the paths and points to have types modified later
                     pathTypeAssociations.put(orderedPathVectors.size() - 1, pathTypes.goToPosition);
-                    pointTypeAssociations.put(orderedPathVectors.size(), pointTypes.Regular);
+                    //pointTypeAssociations.put(orderedPathVectors.size(), pointTypes.Regular);
 
                     prevMouseClick = null;
                     break;
@@ -1594,7 +1594,7 @@ public class WindowController {
                         currentlySelectedPoint = pathPoints[pathPoints.length - 1];
                         editSelectPointLabel.setText("Selected Point: " + currentlySelectedPoint);
 
-                        pointTypes selectedPointType = pointTypeAssociations.get(currentlySelectedPoint);
+                        //pointTypes selectedPointType = pointTypeAssociations.get(currentlySelectedPoint);
                         //pointTypeDropdown.getSelectionModel().select(selectedPointType); // replace with a label that states the selected point type
                     } else {
 
@@ -1618,17 +1618,17 @@ public class WindowController {
 
                     // doing fun stuff with editing points
                     if (currentlySelectedPoint != -1) {
-                        switch (pointTypeAssociations.get(currentlySelectedPoint).displayName()) {
-                            case "Regular":
-
-                                break;
-                            case "Fork - Start":
-
-                                break;
-                            case "Fork - End":
-
-                                break;
-                        }
+//                        switch (pointTypeAssociations.get(currentlySelectedPoint).displayName()) {
+//                            case "Regular":
+//
+//                                break;
+//                            case "Fork - Start":
+//
+//                                break;
+//                            case "Fork - End":
+//
+//                                break;
+//                        }
                     }
                     
                     break;
@@ -2190,6 +2190,11 @@ public class WindowController {
 
             return false; // This has to reflect whether the output proceeded correctly
         }
+
+        public boolean importPath(Path inputFile) {
+
+            return true;
+        }
     }
 
     /*---------- Testers ----------*/
@@ -2216,7 +2221,7 @@ public class WindowController {
                 new Vector2D(-36, 0)
         };
 
-        ArrayList<Vector2D> newPath = new ArrayList<>();
+        ArrayList<Vector2D> newPath = new ArrayList<Vector2D>();
         newPath.addAll(Arrays.asList(path));
 
         ArrayList<Vector2D> pathPoints = generatePathPoints(initialPosition, newPath);
