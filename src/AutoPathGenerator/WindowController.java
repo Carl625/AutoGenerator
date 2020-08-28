@@ -188,7 +188,7 @@ public class WindowController {
     //Editing
     private HashMap<Integer, pathTypes> pathTypeAssociations;
     //private HashMap<Integer, pointTypes> pointTypeAssociations;
-    private ArrayList<ArrayList<ArrayList<Vector2D>>> forkedPaths; // 1st arraylist is a list of forked paths, 2nd arraylist is a set of possible paths in between a fork start and fork end, the third is the actual possible path
+    private ArrayList<ArrayList<ArrayList<Vector2D>>> forkedPaths; // 1st arraylist is a list of forked path groups, 2nd arraylist is a set of possible paths in between a fork start and fork end, the third describes an actual path, one of the possible within the forked path group
 
     public void initialize() {
 
@@ -778,8 +778,8 @@ public class WindowController {
         private void initPosChanged() {
 
             boolean valid = false;
-            double x = initialPos.getComponent(0);
-            double y = initialPos.getComponent(1);
+            double x;
+            double y;
 
             try {
 
